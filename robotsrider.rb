@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 # encoding: utf-8
 
-require 'pp'
 require 'net/http'
 require 'optparse'
 require 'logger'

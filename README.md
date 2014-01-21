@@ -20,3 +20,8 @@ Usage: ./robotsrider.rb [OPTIONS]
 ```
 
 The script doew not visit URLs containing wildcards like '*' or the root domain, for example, when it is disallowed the path "/".
+
+**Required gems**
+
+* colorize (0.6.0)
+
