@@ -19,3 +19,4 @@ Usage: ./robotsrider.rb [OPTIONS]
     -h, --help                       Help screen
 ```
 
+The script doew not visit URLs containing wildcards like '*' or the root domain, for example, when it is disallowed the path "/".
