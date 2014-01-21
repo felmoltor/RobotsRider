@@ -128,39 +128,46 @@ class RobotsRider
                 disallowm =  /^\s*Disallow\s*:\s*(.*)\s*$/.match(rline)  
                 if disallowm
                   prohibido = disallowm.captures[0].strip
-                  if prohibido.length > 0
+                  if prohibido.length > 0 and prohibido.strip != "/"
                     if prohibido[0]=="/"
                       prohibido =  prohibido[1,prohibido.length-1]
                     end
-                    # Visitamos el sitio prohibido
+                    
                     disurl = "#{uri.scheme}://#{uri.host}/#{prohibido}"
                     @log.debug "Found '#{disurl}' as a disallowed entry."
                     puts "Found '#{disurl}' as a disallowed entry."
                     
+                      
                     # TODO: Save in summary the results
                     if @visit
-                      savefile = "#{visiteddir}#{disurl.gsub("/","_").gsub(":","_")}"
-                      @log.debug("Visiting #{disurl} and saving in file #{savefile}")
-                      dis_response = Net::HTTP.get_response(URI(disurl))
-                      if dis_response.code.to_i == 200
-                        # Search for juicy words in the url
-                        if hasJuicyFiles(prohibido)
-                          @log.debug "URL '#{disurl}' exists. (And it seems interesting)"
-                          puts "URL '#{disurl}' exists. (And it seems interesting)".red
-                          # Search for juicy words in the body
-                        elsif hasJuicyWords(dis_response.body)
-                          @log.debug "URL '#{disurl}' exists. (And it seems interesting in his body)"
-                          puts "URL '#{disurl}' exists. (And it seems interesting in his body)".red
+                      # If disallowed entry has wildcards, skip it from visiting
+                      if (prohibido.match(/\*/).nil?)
+                        savefile = "#{visiteddir}#{disurl.gsub("/","_").gsub(":","_")}"
+                        @log.debug("Visiting #{disurl} and saving in file #{savefile}")
+                        dis_response = Net::HTTP.get_response(URI(disurl))
+                        if dis_response.code.to_i == 200
+                          # Search for juicy words in the url
+                          if hasJuicyFiles(prohibido)
+                            @log.debug "URL '#{disurl}' exists. (And it seems interesting)"
+                            puts "URL '#{disurl}' exists. (And it seems interesting)".red
+                            # Search for juicy words in the body
+                          elsif hasJuicyWords(dis_response.body)
+                            @log.debug "URL '#{disurl}' exists. (And it seems interesting in his body)"
+                            puts "URL '#{disurl}' exists. (And it seems interesting in his body)".red
+                          else
+                            @log.debug "URL '#{disurl}' exists."
+                            puts "URL '#{disurl}' exists.".yellow                          
+                          end
+                          sf = File.open(savefile,"w")
+                          sf.write(dis_response.body)
+                          sf.close
                         else
-                          @log.debug "URL '#{disurl}' exists."
-                          puts "URL '#{disurl}' exists.".yellow                          
+                          @log.debug "URL '#{disurl}' does not exists. (#{dis_response.code})"
+                          puts "URL '#{disurl}' does not exists. (#{dis_response.code})".blue
                         end
-                        sf = File.open(savefile,"w")
-                        sf.write(dis_response.body)
-                        sf.close
                       else
-                        @log.debug "URL '#{disurl}' does not exists. (#{dis_response.code})"
-                        puts "URL '#{disurl}' does not exists. (#{dis_response.code})".blue
+                        @log.debug("Disallowed entry has wildcard '*'. Not visiting.")
+                        puts "Disallowed entry has wildcard '*'. Not visiting."
                       end
                     end
                   end
