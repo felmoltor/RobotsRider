@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# encoding: utf-8
 
 require 'pp'
 require 'net/http'
@@ -42,7 +43,14 @@ class RobotsRider
     if (File.exists?("juicypaths.list"))
       jf = File.open("juicypaths.list","r")
       jf.each {|jline|
-        @juicypaths << jline.to_s.upcase.strip
+        @juicypaths << jline.upcase.strip
+      }
+    end
+    @juicywords = []
+    if (File.exists?("juicybody.list"))
+      jw = File.open("juicybody.list","r")
+      jw.each {|jline|
+        @juicywords << jline.upcase.gsub(/\s+/," ").strip
       }
     end
     # @stats = {}
@@ -61,6 +69,37 @@ class RobotsRider
   
   #############
   
+  def hasJuicyWords(htmlcode)
+    # Normalize html code
+    normalizedhtml = htmlcode.upcase.gsub(/\s+/," ")
+    jphrases = {}
+    # pp @juicywords
+    #puts 
+    #puts normalizedhtml
+    
+    @juicywords.each {|jline|
+      jphrases = {}
+      # Multiple words or phrases can be found in the file separated by "&"
+      jwords = jline.split("&")
+      jwords.each{|jword|
+        jphrases[jword.strip] = false # Initialize status to "phrase not found in the body" 
+      }
+      # Search each phrase in the body
+      jphrases.keys.each{ |phrase|
+        if !normalizedhtml.match(phrase).nil?
+          jphrases[phrase] = true
+        end
+      }
+      if jphrases.values.uniq.length == 1 and jphrases.values.uniq[0] == true
+        return true
+      end
+    }
+    
+    return false
+  end
+  
+  #############
+  
   def rideRobots()
     
     # Create folder for visited in this execution
@@ -72,7 +111,10 @@ class RobotsRider
     urlf = File.open(@urlfile,"r")
     urlf.each {|url|
       url.strip!
-      puts "Mirando #{url}..."
+      puts 
+      puts "#"*(url.length + 4)
+      puts "# #{url} #"
+      puts "#"*(url.length + 4)
       begin
         uri = URI.parse(url)
         robotsurl = "#{uri.scheme}://#{uri.host}/robots.txt"
@@ -92,13 +134,8 @@ class RobotsRider
                     end
                     # Visitamos el sitio prohibido
                     disurl = "#{uri.scheme}://#{uri.host}/#{prohibido}"
-                    if hasJuicyFiles(prohibido)
-                      @log.debug "Juicy URL found in '#{disurl}'"
-                      puts "Found '#{disurl}'".red
-                    else
-                      @log.debug "Found '#{disurl}'"
-                      puts "Found '#{disurl}'".yellow
-                    end
+                    @log.debug "Found '#{disurl}' as a disallowed entry."
+                    puts "Found '#{disurl}' as a disallowed entry."
                     
                     # TODO: Save in summary the results
                     if @visit
@@ -106,12 +143,24 @@ class RobotsRider
                       @log.debug("Visiting #{disurl} and saving in file #{savefile}")
                       dis_response = Net::HTTP.get_response(URI(disurl))
                       if dis_response.code.to_i == 200
-                        @log.debug "Response of #{disurl} is 200. Saving file."
+                        # Search for juicy words in the url
+                        if hasJuicyFiles(prohibido)
+                          @log.debug "URL '#{disurl}' exists. (And it seems interesting)"
+                          puts "URL '#{disurl}' exists. (And it seems interesting)".red
+                          # Search for juicy words in the body
+                        elsif hasJuicyWords(dis_response.body)
+                          @log.debug "URL '#{disurl}' exists. (And it seems interesting in his body)"
+                          puts "URL '#{disurl}' exists. (And it seems interesting in his body)".red
+                        else
+                          @log.debug "URL '#{disurl}' exists."
+                          puts "URL '#{disurl}' exists.".yellow                          
+                        end
                         sf = File.open(savefile,"w")
                         sf.write(dis_response.body)
                         sf.close
                       else
-                        @log.debug "Response of #{disurl} is not 200 (#{dis_response.code})"
+                        @log.debug "URL '#{disurl}' does not exists. (#{dis_response.code})"
+                        puts "URL '#{disurl}' does not exists. (#{dis_response.code})".blue
                       end
                     end
                   end
