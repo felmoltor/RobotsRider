@@ -187,7 +187,11 @@ class RobotsRider
         @log.error("Error: #{e.message}")
       rescue URI::InvalidURIError => e
         @log.error("The specified URL #{url} is not valid. Ignoring...")
-        @log.error("Error: #{e.message}")        
+        @log.error("Error: #{e.message}") 
+      rescue Errno::ETIMEDOUT => e
+        @log.error("Connexion with #{url} timed out. Probably the port is not open...")
+        @log.error("Error: #{e.message}")     
+        puts "Connexion with #{url} timed out. Probably the port is not open".red    
       end  
     }
     urlf.close
