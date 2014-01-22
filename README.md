@@ -24,4 +24,4 @@ The script doew not visit URLs containing wildcards like '*' or the root domain,
 **Required gems**
 
 * colorize (0.6.0)
-
+* nokogiri (1.6.0, 1.5.5)
