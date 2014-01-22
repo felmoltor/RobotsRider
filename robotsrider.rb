@@ -286,8 +286,10 @@ class RobotsRider
         @log.error("Error: #{e.message}") 
       rescue Errno::ETIMEDOUT, Timeout::Error => e
         @log.error("Connexion with #{robotsurl} timed out. Probably the port is not open...")
-        @log.error("Error: #{e.message}")     
-        puts "Connexion with #{robotsurl} timed out. Probably the port is not open".red    
+        @log.error("Error: #{e.message}")        
+      rescue EOFError => e
+        @log.error("There was some problem with the data receive. Skiping #{robotsurl}")
+        @log.error("Error: #{e.message}")          
       end  
     }
     urlf.close
