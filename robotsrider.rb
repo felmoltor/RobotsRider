@@ -11,11 +11,10 @@ require 'nokogiri'
 class RobotsRider
   def initialize(options)
     @urlfile = options[:urlfile]
-    @domain = options[:domain]
-    @domain.gsub!("http://","")
-    @domain.gsub!("https://","")
-    @takesnapshot = options[:takesnapshot]
+    @domain = options[:domain].gsub("http://","").gsub("https://","").gsub("www.","")
     @visit = options[:visit]
+    @follow = options[:follow]
+    @outputfile = options[:outputfile]
     @log = Logger.new("logs/#{Time.now.strftime('%Y%m%d_%H%M%S')}_robotsrider.log")
     
     if (!options[:urlfile].nil? and File.exists?(options[:urlfile]))
@@ -31,8 +30,8 @@ class RobotsRider
         @log.level = Logger::WARN
       elsif options[:loglevel] = "ERROR"
         @log.level = Logger::ERROR
-      elsif options[:loglevel] = "CRITICAL"
-        @log.level = Logger::CRITICAL
+      elsif options[:loglevel] = "FATAL"
+        @log.level = Logger::FATAL
       else
         @log.level = Logger::DEBUG
       end      
@@ -52,6 +51,14 @@ class RobotsRider
       jw = File.open("juicybody.list","r")
       jw.each {|jline|
         @juicywords << jline.upcase.gsub(/\s+/," ").strip
+      }
+    end
+    
+    @juicytitles = []
+    if (File.exists?("juicytitles.list"))
+      jt = File.open("juicytitles.list","r")
+      jt.each {|jtitle|
+        @juicytitles << jtitle.upcase.gsub(/\s+/," ").strip
       }
     end
     
@@ -82,16 +89,13 @@ class RobotsRider
   
   def hasJuicyTitle(htmlcode)
     html_doc = Nokogiri::HTML(htmlcode)
-    pagetitle = html_doc.css('title').text.upcase.gsub(" ","")
+    pagetitle = html_doc.css('title').text.upcase.gsub(/\s+/," ")
     
-    jtf = File.open("juicytitles.list","r")
-    jtf.each {|jtitle|
-      if pagetitle == jtitle.upcase.gsub(" ","")
-        jtf.close
+    @juicytitles.each {|jtitle|
+      if pagetitle == jtitle
         return true
       end
     }
-    jtf.close
     return false
   end
   
@@ -125,8 +129,7 @@ class RobotsRider
     
     return false
   end
-  
-  
+    
   ##########################
   
   def getTheHarvesterPath()
@@ -174,20 +177,47 @@ class RobotsRider
         }
         hostfound = hostfound.sort.uniq
         urlsfile = File.open(resultfile,"w")
-        hostfound.each {|h| urlsfile.puts("http://#{h}")}  
+        hostfound.each {|h|
+          if h.include?(@domain)
+            urlsfile.puts("http://#{h}")
+          end
+        }  
         urlsfile.close        
       else
-        @log.error "There was some error for 'theHarvester' creating the file '#{@domain}.html'. "
-        puts "There was some error for 'theHarvester' creating the file '#{@domain}.html'. "
+        @log.error "The tool 'theHarvester' didn't create the file '#{@domain}.html'"
+        puts "The tool 'theHarvester' didn't create the file'#{@domain}.html'"
         resultfile = nil
       end
+      File.delete(thtmpfile)
     else
-      @log.critical "You don't have the tool 'theharvester' installed. Donwload and install it before using option '-d' again (https://code.google.com/p/theharvester/downloads/list)"
+      @log.fatal "You don't have the tool 'theharvester' installed. Donwload and install it before using option '-d' again"
       puts "You don't have the tool 'theharvester' installed. Donwload and install it before using option '-d' again (https://code.google.com/p/theharvester/downloads/list)"
       resultfile = nil
     end
-    File.delete(thtmpfile)
     return resultfile    
+  end
+  
+  #############
+  
+  def fetch(uri_str, limit = 5)
+    # You should choose better exception.
+    raise ArgumentError, 'HTTP redirect too deep' if limit == 0
+  
+    url = URI.parse(uri_str)
+    req = Net::HTTP::Get.new(url.path, {'User-Agent' => 'Mozilla/4.0 (compatible; MSIE 7.0b; Windows NT 5.1; .NET CLR 1.1.4322)' })
+    response = Net::HTTP.start(url.host, url.port) { |http| http.request(req) }
+    
+    if response == Net::HTTPRedirection and @follow
+      @log.debug "Following redirection to #{response['location']}..."
+      puts "Following redirection to #{response['location']}..."
+      return fetch(response['location'], limit - 1)
+    else
+      if response == Net::HTTPRedirection
+        @log.debug "No following redirection to #{response['location']}..."
+        puts "No following redirection to #{response['location']}..."
+      end
+      return response
+    end
   end
   
   #############
@@ -210,7 +240,8 @@ class RobotsRider
         uri = URI.parse(url)
         robotsurl = "#{uri.scheme}://#{uri.host}/robots.txt"
         # TODO: Change timeout for the HTTP connexion (https://stackoverflow.com/questions/13074779/ruby-nethttp-idle-timeout)
-        robots_response = Net::HTTP.get_response(URI(robotsurl))
+        robots_response = fetch(robotsurl)
+        # robots_response = Net::HTTP.get_response(URI(robotsurl))
         if robots_response.code.to_i == 200
           robots_body = robots_response.body
           if !robots_body.nil?
@@ -235,7 +266,8 @@ class RobotsRider
                       if (prohibido.match(/\*/).nil?)
                         savefile = "#{visiteddir}#{disurl.gsub("/","_").gsub(":","_")}"
                         @log.debug("Visiting #{disurl} and saving in file #{savefile}")
-                        dis_response = Net::HTTP.get_response(URI(disurl))
+                        dis_response = fetch(disurl)
+                        # dis_response = Net::HTTP.get_response(URI(disurl))
                         if dis_response.code.to_i == 200
                           # Search for juicy words in the url
                           @log.debug "URL '#{disurl}' exists."
@@ -276,7 +308,7 @@ class RobotsRider
           end
         else # if robots_response.code == 200
           @log.warn("It seems #{robotsurl} does not exists (#{robots_response.code}).")
-          puts "It seemps #{robotsurl} does not exists (#{robots_response.code}).".yellow
+          puts "It seems #{robotsurl} does not exists (#{robots_response.code}).".yellow
         end        
       rescue URI::BadURIError => e
         @log.error("The specified URL #{url} is not valid. Ignoring...")
@@ -289,10 +321,22 @@ class RobotsRider
         @log.error("Error: #{e.message}")        
       rescue EOFError => e
         @log.error("There was some problem with the data receive. Skiping #{robotsurl}")
-        @log.error("Error: #{e.message}")          
+        @log.error("Error: #{e.message}")      
+      rescue Errno::ECONNREFUSED => e
+        @log.error("The connection to this URL was rejected. Skiping #{robotsurl}")
+        @log.error("Error: #{e.message}")  
       end  
     }
     urlf.close
+  end
+  
+  ##########################
+
+  def saveReport()
+    # STUB: Save output in a beautiful HTML or XML
+    if !@outputfile.nil?
+      puts "STUB: Saving summary to #{@outputfile}"
+    end
   end
   
 end # class RobotsRider
@@ -306,10 +350,10 @@ def parseOptions()
   options = {
     :urlfile => nil,
     :domain => nil,
-    :takesnapshot => false, 
     :visit => true, 
-    :crawl => false, 
-    :loglevel => nil
+    :follow => false, 
+    :outputfile => nil, 
+    :loglevel => "DEBUG"
   }
   optparse = OptionParser.new do |opts|   
     
@@ -321,14 +365,17 @@ def parseOptions()
     opts.on( '-u', '--urls FILE', String, "File containing the list of URLs to check for robots.txt" ) do |file|
       options[:urlfile] = file
     end
-    opts.on( '-s', '--snapshot','Take a snapshot of the disallowed entries found in robots.txt' ) do
-      options[:takesnapshot] = true
-    end
-    opts.on( '-v', '--[no-]visit', 'Visit the disallowed entries and record the server response (code and html)' ) do |visit|
+    opts.on( '-v', '--[no-]visit', 'Visit the disallowed entries and record the server response [default: True]' ) do |visit|
       options[:visit] = visit
     end
-    opts.on( '-L', '--loglevel [LOGLEVEL]', ["DEBUG","WARN","ERROR","CRITICAL"], 'Set loggin level (DEBUG, WARN, ERROR, CRITICAL)' ) do |loglevel|
-      if ["DEBUG","WARN","ERROR","CRITICAL"].include?(loglevel)
+    opts.on( '-F', '--[no-]follow', 'Follow redirect for disallowed entries with 30X responses [default: False]' ) do |follow|
+      options[:follow] = follow
+    end
+    opts.on( '-w', '--write', 'TODO: Save the summary of the execution to this beautiful HTML file' ) do |ofile|
+      options[:outputfile] = ofile
+    end
+    opts.on( '-L', '--loglevel [LOGLEVEL]', ["DEBUG","WARN","ERROR","FATAL"], 'Set loggin level (DEBUG, WARN, ERROR, CRITICAL)  [default: DEBUG]' ) do |loglevel|
+      if ["DEBUG","WARN","ERROR","FATAL"].include?(loglevel)
         options[:loglevel] = loglevel
       end
     end     
@@ -393,4 +440,4 @@ op = parseOptions()
 robotsrider = RobotsRider.new(op)
 # If the user specified a domain, the URLs to explore will be found in the output of the harvester
 summary = robotsrider.rideRobots
-# TODO: Print summary in screen
+robotsrider.saveReport
