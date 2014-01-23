@@ -10,13 +10,13 @@ This special word list can be found in the file __'juicypaths.list'__ and can be
 The script can be executed with this options:
 
 ```
-
 Usage: ./robotsrider.rb [OPTIONS]
     -d, --domain DOMAIN              Domain to explore for robots.txt (This option needs program 'theharvester' in your PATH)
     -u, --urls FILE                  File containing the list of URLs to check for robots.txt
     -v, --[no-]visit                 Visit the disallowed entries and record the server response [default: True]
     -F, --[no-]follow                Follow redirect for disallowed entries with 30X responses [default: False]
-    -w, --write                      TODO: Save the summary of the execution to this beautiful HTML file
+    -w, --[no-]wfuzz                 Use wfuzz program to fuzz wildcards in the disallowed entries [Default: False]
+    -o, --output                     TODO: Save the summary of the execution to this beautiful HTML file
     -L, --loglevel [LOGLEVEL]        Set loggin level (DEBUG, WARN, ERROR, CRITICAL)  [default: DEBUG]
     -h, --help                       Help screen
 ```
