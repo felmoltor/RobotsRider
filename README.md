@@ -32,7 +32,7 @@ Options Details
 * __-u, --urls__: You provide a file with a big list of URL you want to test with Robots Rider. Either you provide this option or you provide '-d' option. One of this two options is mandatory.
 * __-v, --[no-]visit__: This flag tells Robots Rider if he is allowed to visit, explore and save the disallowed entries found in robots.txt. If you don't provide this option Robots Rider will only list the disallowed entries found in robots.txt
 * __-F, --[no-]follow__: Follow redirections or not (Usually 301 and 302 codes).
-* __-w, --[no-]wfuzz__: You'll need to have installed and in your PATH the program 'wfuzz'. When a wildcard ('*') is found in a disallowed entry, Robots Rider can use a dictionary to fuzz this wildcard. For example, if there is a disallowed entry like this '/informes/*.zip', the fuzzer will use a dictionary provided by you to substitute the wildcard. The dictionary used can be configured in file 'config/wfuzz.cfg'.
+* __-w, --[no-]wfuzz__: You'll need to have installed and in your PATH the program 'wfuzz'. When a wildcard ('\*') is found in a disallowed entry, Robots Rider can use a dictionary to fuzz this wildcard. For example, if there is a disallowed entry like this '/informes/\*.zip', the fuzzer will use a dictionary provided by you to substitute the wildcard. The dictionary used can be configured in file 'config/wfuzz.cfg'.
 * __-o, --output__: NOT IMPLEMENTED. Output file name to save the results.
 * __-L, --loglevel__: This is the level of verbosity that will be recorded in the logs.
 
