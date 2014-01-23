@@ -364,7 +364,7 @@ class RobotsRider
           if !robots_body.nil?
             # print robots_body
             if robots_body.length > 0
-              @log.debug  "Searching for 'Disallowed' URLs..."
+              @log.debug  "Searching for 'Disallowed' URLs"
               puts "Searching for 'Disallowed' URLs..."
               puts
               robots_body.split("\n").each {|rline|
@@ -526,7 +526,7 @@ def parseOptions()
     opts.on( '-o', '--output', 'TODO: Save the summary of the execution to this beautiful HTML file' ) do |ofile|
       options[:outputfile] = ofile
     end
-    opts.on( '-L', '--loglevel [LOGLEVEL]', ["DEBUG","INFO","WARN","ERROR","FATAL"], 'Set loggin level (DEBUG, WARN, ERROR, CRITICAL)  [default: DEBUG]' ) do |loglevel|
+    opts.on( '-L', '--loglevel [LOGLEVEL]', ["DEBUG","INFO","WARN","ERROR","FATAL"], 'Set loggin level (DEBUG, INFO, WARN, ERROR, FATAL)  [default: DEBUG]' ) do |loglevel|
       if ["DEBUG","INFO","WARN","ERROR","FATAL"].include?(loglevel)
         options[:loglevel] = loglevel
       end
