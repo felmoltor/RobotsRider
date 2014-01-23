@@ -1,0 +1,33 @@
+# Directory Listing
+Index of / & Parent Directory
+
+# username & password
+
+# Databases
+# SQL Server:
+Incorrect syntax near
+An error has occurred while establishing a connection to the server
+does not match with a table name or alias name used in the query
+Too many table names in the query
+ORDER BY items must appear in the select list if the statement contains a UNION operator
+Query not allowed
+The ORDER BY position number is out of range of the number of items in the select list.
+
+# MySQL:
+Can't create table
+Can't create database
+Can't drop database
+Error dropping database 
+Error on delete of 
+Access denied for user & using password
+Access denied for user & to database
+Unknown column & in
+Incorrect column specifier for column 
+Host & is not allowed to connect to this MySQL server
+Aborted connection & to db: & user:
+User & already has more than 'max_user_connections' active connections
+Error connecting to master:
+Forcing close of thread & user:
+Message: You are using MySQL as an anonymous user
+Message: There is no such grant defined for user  & on host
+Message: & command denied to user & for table 
