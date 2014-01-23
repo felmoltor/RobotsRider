@@ -28,6 +28,7 @@ The script doew not visit URLs containing wildcards like '*' or the root domain,
 * colorize (0.6.0)
 * nokogiri (1.6.0, 1.5.5)
 
-** Optional binaries**
+**Optional binaries**
 
 * theHarvester (https://code.google.com/p/theharvester/downloads/list): If you prefer to use the option '-d' you'll need this program.
+* wfuzz (https://code.google.com/p/wfuzz/downloads/list): If you want to user '-w' options, you'll need this program.
