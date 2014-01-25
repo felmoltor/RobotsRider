@@ -1,0 +1,316 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
+
+<head profile="http://gmpg.org/xfn/11">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<title>
+				Footholds - Google Hacking Database
+	</title>
+
+<link rel="stylesheet" href="http://www.exploit-db.com/wp-content/themes/exploit/style.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="http://www.exploit-db.com/wp-content/themes/exploit/moaub.css" type="text/css" />
+<!--[if IE]>
+<link rel="stylesheet" href="http://www.exploit-db.com/wp-content/themes/exploit/style.ie.css" type="text/css" media="screen" />
+<![endif]-->
+<!-- <script type="text/javascript" src="http://www.exploit-db.com/wp-content/themes/exploit/js/jquery-1.4.2.min.js"></script> -->
+<script type="text/javascript" src="http://www.exploit-db.com/wp-content/themes/exploit/js/scripts.js"></script>
+<script>
+var ajaxurl = '/wp-admin/admin-ajax.php';
+</script>
+
+
+		<link rel='stylesheet' id='shutter-css'  href='/slider/shutter-reloaded.css?ver=1.3.0' type='text/css' media='screen' />
+
+		<script type='text/javascript'>
+		/* <![CDATA[ */
+		var shutterSettings = {
+			msgLoading: "L O A D I N G",
+			msgClose: "Click to Close",
+			imageCount: "1"
+		};
+		/* ]]> */
+		</script>
+		<script type='text/javascript' src='/slider/shutter-reloaded.js?ver=1.3.0'></script>
+
+<link rel='stylesheet' id='codecolorer-css'  href='http://www.exploit-db.com/wp-content/plugins/codecolorer/codecolorer.css?ver=0.9.9' type='text/css' media='screen' />
+<script type='text/javascript' src='http://www.exploit-db.com/wp-includes/js/jquery/jquery.js?ver=1.10.2'></script>
+<script type='text/javascript' src='http://www.exploit-db.com/wp-includes/js/jquery/jquery-migrate.min.js?ver=1.2.1'></script>
+<script type='text/javascript' src='http://www.exploit-db.com/wp-includes/js/comment-reply.min.js?ver=3.8.1'></script>
+<link rel='prev' title='Profile' href='http://www.exploit-db.com/profile/' />
+<link rel='next' title='ghdb' href='http://www.exploit-db.com/ghdb/' />
+<meta name="generator" content="WordPress 3.8.1" />
+<link rel='canonical' href='http://www.exploit-db.com/google-dorks/' />
+<link rel='shortlink' href='http://www.exploit-db.com/?p=2394' />
+</head>
+<body class="page page-id-2394 page-template page-template-tpl_gd_index-php">
+<!--	<div id="digi-social" style="width:165px; height:50px; margin-top:3px; margin-bottom:-53px; float:right;">
+		<a href="http://www.exploit-db.com/feed/"><img src="http://www.exploit-db.com/images/blog-rss.png" alt="Blog RSS" border="0" /></a><a href="/rss.php"><img src="http://www.exploit-db.com/images/sploit-rss.png" alt="Exploits RSS" border="0" /></a><a rel="nofollow" href="http://www.facebook.com/pages/Exploit-Database/139530046073793" target="_blank" class="external"><img src="http://www.exploit-db.com/images/facebook-icon.png" alt="Facebook" border="0" /></a>
+	</div>
+-->
+<div id="page">
+	<div id="header" class="clearfix">
+		<a href="http://www.exploit-db.com" id="logo">
+		
+<img id="digi-logo" src="http://www.exploit-db.com/wp-content/themes/exploit/images/exdb_logo2.png" alt="Exploits Database by Offensive Security" title="Exploits Database by Offensive Security" />
+		</a>
+		<div id="exploitsnum" style="margin: 4px 3px 0 -70px;">
+			<div id="digi-social" style="height:70px;">
+				<a href="http://www.exploit-db.com/news/"><img src="http://www.exploit-db.com/images/blog-rss.png" alt="Blog RSS" border="0" /></a><a href="/rss.xml"><img 
+src="http://www.exploit-db.com/images/sploit-rss.png" alt="Exploits RSS" 
+border="0" /></a><a rel="nofollow" href="http://www.facebook.com/pages/Exploit-Database/139530046073793" target="_blank" class="external"><img src="http://www.exploit-db.com/images/facebook-icon.png" alt="Facebook" border="0" /></a>
+			</div>
+			Currently archiving <span class="color1">27537</span> exploits <br /><br />
+			Updated (CVE and Archive): <span class="color1">Sat Jan 25 2014
+</span> <div style="margin:-40px -50px -10px 300px;"><a href="http://www.exploit-db.com/archive.tar.bz2"><img src="http://www.exploit-db.com/images/download-1.png" alt="Download Archives" title="Download Archives" style="width:40px; height:40px;" /></a></div>
+			<br />
+					</div>
+	</div>
+	<div id="navigation">
+				 <div class="menu-digimenu-container"><ul id="menu-digimenu" class="menu"><li id="menu-item-2403" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-home menu-item-2403"><a href="http://www.exploit-db.com/">HOME</a></li>
+<li id="menu-item-2404" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-2404"><a href="http://www.exploit-db.com/google-dorks/">GHDB</a></li>
+<li id="menu-item-2406" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-2406"><a href="http://www.exploit-db.com/about/">ABOUT</a></li>
+<li id="menu-item-2407" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-2407"><a href="http://www.exploit-db.com/remote/">REMOTE</a></li>
+<li id="menu-item-2408" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-2408"><a href="http://www.exploit-db.com/local/">LOCAL</a></li>
+<li id="menu-item-2409" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-2409"><a href="http://www.exploit-db.com/webapps/">WEB</a></li>
+<li id="menu-item-2410" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-2410"><a href="http://www.exploit-db.com/dos/">DOS</a></li>
+<li id="menu-item-2411" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-2411"><a href="http://www.exploit-db.com/shellcode/">SHELLCODE</a></li>
+<li id="menu-item-2412" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-2412"><a href="http://www.exploit-db.com/papers/">PAPERS</a></li>
+<li id="menu-item-2413" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-2413"><a href="http://www.exploit-db.com/search/">SEARCH</a></li>
+<li id="menu-item-2414" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-2414"><a href="http://www.exploit-db.com/submit/">SUBMIT</a></li>
+</ul></div> 	</div>	
+<div class="content clearfix">
+
+	<div style="margin:auto;margin-bottom:15px;text-align:center;">
+		<a href="http://www.offensive-security.com" target="_blank" rel="nofollow" class="external">
+		<img src="http://www.exploit-db.com/offsec-2013-training.gif" alt="" border="0" /></a>
+		<img src="http://www.exploit-db.com/images/cve.png" alt="CVE Certified" title="CVE MITRE CERTIFIED" style="position:relative; left:20px; margin-right:-30px;" />
+	</div>
+	<div class="post gd">
+		<script>
+			function submitGDForm(url)
+			{
+				var cat_id = jQuery('#gd_category_id :selected').val();
+				jQuery('#dg_category_form').attr('action', url + cat_id + '/');
+			}
+		
+			function gd_changeForm()
+			{
+				jQuery('#dg_category_form').submit();
+			}
+		</script>
+		<div class="dg_category_form">	
+		<center><img src="http://www.exploit-db.com/images/ghdb-logoFinal-digip.png" style="margin-bottom:-10px; width:300px; height:90px; float:right; padding-left:20px; padding-bottom:20px;" alt="GHDB" /></center>
+			<h2>Google Hacking Database</h2>
+			<form action="" method="post" onsubmit="return submitGDForm('http://www.exploit-db.com/google-dorks/');" id="dg_category_form">
+				<ul>
+					<li>
+						<label for="gd_category_id">Select category:</label>
+						<select name="gd_category_id" onchange="gd_changeForm();" id="gd_category_id">
+						<option value="0">--Select Category--</option>
+													<option value="1" selected="selected">Footholds</option>	
+													<option value="2">Files containing usernames</option>	
+													<option value="3">Sensitive Directories</option>	
+													<option value="4">Web Server Detection</option>	
+													<option value="5">Vulnerable Files</option>	
+													<option value="6">Vulnerable Servers</option>	
+													<option value="7">Error Messages</option>	
+													<option value="8">Files containing juicy info</option>	
+													<option value="9">Files containing passwords</option>	
+													<option value="10">Sensitive Online Shopping Info</option>	
+													<option value="11">Network or vulnerability data</option>	
+													<option value="12">Pages containing login portals</option>	
+													<option value="13">Various Online Devices</option>	
+													<option value="14">Advisories and Vulnerabilities</option>	
+												</select>
+					</li>
+				</ul>
+			</form>
+		</div>
+		<div class="gd_category_head">
+			<h2>Footholds</h2>
+			<p>Examples of queries that can help a hacker gain a foothold into a web server</p>
+		</div>
+			<div class="pagination gd_pagination">
+											<span>&lt;&lt;</span>
+						<span class="color">prev</span>
+										
+										    	<span class="color1">1</span>
+					    											    <a class="color" href="http://www.exploit-db.com/google-dorks/1/?pg=2">2</a>
+					    										
+											<a class="color" href="http://www.exploit-db.com/google-dorks/1/?pg=2">next</a>
+						<a href="http://www.exploit-db.com/google-dorks/1/?pg=2">&gt;&gt;</a>
+						</div>		
+		<table style="width:810px;" class="sortable category-list">
+			<tr>
+				<th>DATE</th>
+				<th>Title</th>
+				<th>Summary</th>
+			</tr>
+										<tr class="data">
+							<td style="width:45px;">2014-01-03</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/3927/">intitle:&quot;WSO 2.4&quot; [ Sec. Info ], [ Files...</a></td>
+							<td style="width:595px; overflow:hidden;">dork to find uploaded WSO 2.4 shell by hackers.
+found by Anon?M ID
+...</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2014-01-03</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/3926/">intitle:&quot;=[ 1n73ct10n privat shell ]=&quot;</a></td>
+							<td style="width:595px; overflow:hidden;">the dork is used to find uploaded 1n73ct10n Shell on website.
+found by Anon?M ID
+...</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2013-11-25</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/3918/">filetype:php intext:&quot;!C99Shell v. 1.0 beta&qu...</a></td>
+							<td style="width:595px; overflow:hidden;">php backdoor: c99 shell
+
+-- 
+-[Voluntas Vincit Omnia]-
+website http://www.erisresearch.org/...</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2013-11-25</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/3912/">intitle:&quot;uploader by ghost-dz&quot; ext:php</a></td>
+							<td style="width:595px; overflow:hidden;">intitle:&quot;uploader by ghost-dz&quot; ext:php...</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2013-08-08</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/3867/">inurl:1337w0rm.php intitle:1337w0rm</a></td>
+							<td style="width:595px; overflow:hidden;">Finds websites that have 1337w0rm's CPanel cracker uploaded.
+Since the Cracker is relatively n...</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2012-11-02</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/3816/">inurl:&quot;r00t.php&quot;</a></td>
+							<td style="width:595px; overflow:hidden;">This dork finds websites that were hacked, backdoored and contains their 
+system information e...</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2012-11-02</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/3808/">intitle:C0ded By web.sniper</a></td>
+							<td style="width:595px; overflow:hidden;">User &amp; Domain || Symlink
+Using this dork you can find the User and the Domains of the Serv...</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2012-11-02</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/3807/">intitle:Priv8 SCR</a></td>
+							<td style="width:595px; overflow:hidden;">I am Un0wn_X
+
+Symlink User configs
+
+intitle:Priv8 SCR
+
+...</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2011-09-26</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/3744/">inurl:&quot;amfphp/browser/servicebrowser.swf&quot...</a></td>
+							<td style="width:595px; overflow:hidden;">AMFPHP service browser, debug interface. Author: syddd
+...</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2011-01-09</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/3668/">allintext:&quot;fs-admin.php&quot;</a></td>
+							<td style="width:595px; overflow:hidden;">A foothold using allintext:&quot;fs-admin.php&quot; shows the world readable 
+directories of a...</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2006-05-03</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/1361/">(intitle:&quot;SHOUTcast Administrator&quot;)|(int...</a></td>
+							<td style="width:595px; overflow:hidden;">sHOUTcast is a free-of-charge audio homesteading solution. It permits anyone on the internet to...</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2006-03-15</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/1275/">(intitle:&quot;WordPress ÃƒÂ¢Ã¢â€šÂ¬Ã...</a></td>
+							<td style="width:595px; overflow:hidden;">Alter setup configuration files.add ?step=1...</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2006-03-06</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/1270/">&quot;index of /&quot; ( upload.cfm | upload.asp |...</a></td>
+							<td style="width:595px; overflow:hidden;">searches for scripts that let you upload files which you can then execute on the server....</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2006-02-08</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/1258/">&quot;Please re-enter your password It must match ...</a></td>
+							<td style="width:595px; overflow:hidden;">Invision Powerboard registration pages. Plain and simple....</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2006-01-04</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/1245/">inurl:&quot;tmtrack.dll?&quot;</a></td>
+							<td style="width:595px; overflow:hidden;">This query shows installations of Serena Teamtrack. (www.serena.com).You may be able to adjust ...</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2005-10-06</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/1163/">inurl:polly/CP</a></td>
+							<td style="width:595px; overflow:hidden;">You can get into admin panel without logging....</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2005-09-25</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/1137/">intitle:&quot;net2ftp&quot; &quot;powered by net2f...</a></td>
+							<td style="width:595px; overflow:hidden;">net2ftp is a web-based FTP client written in PHP. Lets explain this in detail. Web-based means ...</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2005-08-15</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/1064/">intitle:MyShell 1.1.0 build 20010923</a></td>
+							<td style="width:595px; overflow:hidden;">Basicly MyShell is a php program that allows you to execute commands remotely on whichever serv...</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2005-05-02</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/965/">intitle:&quot;YALA: Yet Another LDAP Administrator...</a></td>
+							<td style="width:595px; overflow:hidden;">YALA is a web-based LDAP administration GUI. The idea is to simplify the directory administrati...</td>
+						</tr>
+											<tr class="data">
+							<td style="width:45px;">2005-04-27</td>
+							<td style="width:170px; overflow:hidden;"><a href="http://www.exploit-db.com/ghdb/959/">intitle:&quot;ERROR: The requested URL could not b...</a></td>
+							<td style="width:595px; overflow:hidden;">squid error messages, most likely from reverse proxy servers....</td>
+						</tr>
+							</table>
+			<div class="pagination gd_pagination">
+											<span>&lt;&lt;</span>
+						<span class="color">prev</span>
+										
+										    	<span class="color1">1</span>
+					    											    <a class="color" href="http://www.exploit-db.com/google-dorks/1/?pg=2">2</a>
+					    										
+											<a class="color" href="http://www.exploit-db.com/google-dorks/1/?pg=2">next</a>
+						<a href="http://www.exploit-db.com/google-dorks/1/?pg=2">&gt;&gt;</a>
+						</div>		
+	</div> <!-- end of .post -->
+<div style="margin:auto;text-align:center;">
+<script type="text/javascript"><!--
+google_ad_client = "pub-0054251952045395";
+/* Exploit Database Leaderboard */
+google_ad_slot = "7506363877";
+google_ad_width = 728;
+google_ad_height = 90;
+//-->
+</script>
+<script type="text/javascript"
+src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
+</script>
+</div>
+</div> <!-- end of .content -->
+<div id="footer">
+		<a href="http://www.offensive-security.com" target="_blank" rel="nofollow" class="external"><img src="http://www.exploit-db.com/offsec-2013-training.gif" alt="" border="0" style="width:728px; height:90px; display:block; margin:0 auto;" /></a>
+	<br /><br />
+	&copy; Offensive Security 2014	<br />
+	
+</div>
+</div>
+
+
+			<script type="text/javascript">
+				var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+				document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+			</script>
+			<script type="text/javascript">
+				try {
+					var pageTracker = _gat._getTracker("UA-1981501-4");
+					pageTracker._trackPageview();
+					} catch(err) {}
+			</script>	
+		</body>
+</html>

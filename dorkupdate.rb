@@ -5,7 +5,6 @@
 # If this web changes, probably this script will stop working.
 
 require './classes/GoogleDorkUpdater'
-require 'sqlite3'
 require 'colorize'
 
 puts "STUB: Updating Google Dork database!"
