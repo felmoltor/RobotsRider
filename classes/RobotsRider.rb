@@ -10,8 +10,11 @@ require 'fileutils'
 # TODO: Add queries to archive.org API to retrieve cached entries of webpages
 
 class RobotsRider
+  
   def initialize(options)
     @@CMSCONFIDENCE = 0.75
+    @WPSCANPATH = getWPScanPath()
+    @JOOMSCANPATH = getJoomscanPath()
     @urlfile = options[:urlfile]
     @domain = options[:domain]
     if !@domain.nil?
@@ -73,7 +76,6 @@ class RobotsRider
     # Initialize the URL file if there was a domain specified and the user has 
     # theHarvester in hist PATH.
     if !@domain.nil?
-      
       newurlfile = queryTheHarvester
       if !newurlfile.nil?
         @urlfile = newurlfile
@@ -91,6 +93,23 @@ class RobotsRider
       end
     }
     return false
+  end
+  
+  #############
+  
+  def launchWPScan(path)
+    # Launch wpscan
+    @log.debug "Launching wpscan against #{path}"
+    system("#{@WPSCANPATH} -ot output/scanners/#{path.gsub(/(:|\/)/,"_")} -oh output/scanners/#{path.gsub(/(:|\/)/,"_")} -u #{path}")
+  end
+  
+  #############
+  
+  def launchJoomscan(path)
+    # If this script downloaded the scanner previously execute the last downloaded
+    # Launch joomscan
+    @log.debug "Launching joomscan against #{path}"
+    system("#{@JOOMSCANPATH} -ot output/scanners/#{path.gsub(/(:|\/)/,"_")} -oh output/scanners/#{path.gsub(/(:|\/)/,"_")} -u #{path}")
   end
   
   #############
@@ -138,11 +157,39 @@ class RobotsRider
     
     return nil
   end
-    
+     
+  ##########################
+  
+  def getWPScanPath()
+    # Check if wfuzz is in the path
+    whereisoutput = `whereis wpscan`
+    thpaths = whereisoutput.split(":")[1]
+    thpaths.split(" ").each {|path|
+      if `file -i #{path}`.split(":")[1].strip.split(";")[0].strip == "text/x-ruby"
+        return path
+      end      
+    }
+    return nil
+  end
+  
+  ##########################
+  
+  def getJoomscanPath()
+    # Check if wfuzz is in the path
+    whereisoutput = `whereis joomscan`
+    thpaths = whereisoutput.split(":")[1]
+    thpaths.split(" ").each {|path|
+      if `file -i #{path}`.split(":")[1].strip.split(";")[0].strip == "text/x-shellscript"
+        return path
+      end      
+    }
+    return nil
+  end
+   
   ##########################
   
   def getWfuzzPath()
-    # Check if theharvester is in the path
+    # Check if wfuzz is in the path
     whereisoutput = `whereis wfuzz`
     thpaths = whereisoutput.split(":")[1]
     thpaths.split(" ").each {|path|
