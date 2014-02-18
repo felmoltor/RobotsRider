@@ -15,6 +15,9 @@ class RobotsRider
     @@CMSCONFIDENCE = 0.75
     @WPSCANPATH = getWPScanPath()
     @JOOMSCANPATH = getJoomscanPath()
+    @wpscanconfig = readWPScanConfig()
+    @joomscanconfig = readJoomscanConfig()
+    
     @urlfile = options[:urlfile]
     @domain = options[:domain]
     if !@domain.nil?
@@ -97,10 +100,23 @@ class RobotsRider
   
   #############
   
+  def readWPScanConfig()
+    wpscanconfig = eval(File.open("config/wpscan.cfg","r").read)
+  end
+  
+  #############
+  
+  def readJoomscanConfig()
+    joomscanconfig = eval(File.open("config/joomscan.cfg","r").read)
+  end
+  
+  #############
+  
   def launchWPScan(path)
     # Launch wpscan
-    @log.debug "Launching wpscan against #{path}"
-    system("#{@WPSCANPATH} -ot output/scanners/#{path.gsub(/(:|\/)/,"_")} -oh output/scanners/#{path.gsub(/(:|\/)/,"_")} -u #{path}")
+    @log.debug "Launching wpscan: #{@WPSCANPATH}  -u #{path}"
+    # -ot output/scanners/#{path.gsub(/(:|\/)/,"_")} -oh output/scanners/#{path.gsub(/(:|\/)/,"_")}
+    system("#{@WPSCANPATH}  -u #{path}")
   end
   
   #############
@@ -108,8 +124,9 @@ class RobotsRider
   def launchJoomscan(path)
     # If this script downloaded the scanner previously execute the last downloaded
     # Launch joomscan
-    @log.debug "Launching joomscan against #{path}"
-    system("#{@JOOMSCANPATH} -ot output/scanners/#{path.gsub(/(:|\/)/,"_")} -oh output/scanners/#{path.gsub(/(:|\/)/,"_")} -u #{path}")
+    @log.debug "Launching Joomscan: #{@JOOMSCANPATH} -u #{path}"
+    # -ot output/scanners/#{path.gsub(/(:|\/)/,"_")} -oh output/scanners/#{path.gsub(/(:|\/)/,"_")}
+    system("#{@JOOMSCANPATH} -u #{path}")
   end
   
   #############
@@ -424,6 +441,26 @@ class RobotsRider
                 if (possiblecms[1] > @@CMSCONFIDENCE)
                   print " [POSSIBLE CMS]: ".green
                   puts "#{possiblecms[0]} (#{(possiblecms[1]*100)}% coincidences)"
+                  # If the CMS is WP or Joomla or Drupal, execute the scanners
+                  if possiblecms[0].downcase.include?("joomla")
+                    if @joomscanconfig["enabled"].to_i != 0
+                      puts "Executing Joomla Scanner"
+                      launchJoomscan("#{uri.scheme}://#{uri.host}/")
+                    else
+                      @log.debug("Not scanning with joomscan '#{uri.scheme}://#{uri.host}/'")
+                    end
+                  elsif possiblecms[0].downcase.include?("wordpress")
+                    if @wpscanconfig["enabled"].to_i != 0
+                      puts "Executing Wordpress scanner if enabled"
+                      launchWPScan("#{uri.scheme}://#{uri.host}/")
+                    else
+                      @log.debug("Not scanning with wpscan '#{uri.scheme}://#{uri.host}/'")
+                    end
+                  elsif possiblecms[0].downcase.include?("drupal")
+                    puts "STUB: Executing Drupal scanner"
+                  else
+                    puts "No scanner configured for this CMS."
+                  end
                 end                
               }
               @log.debug  "Searching for 'Disallowed' URLs"

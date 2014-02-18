@@ -1,0 +1,8 @@
+admin
+root
+usuario
+user
+administrator
+administrador
+gestor
+webadmin
