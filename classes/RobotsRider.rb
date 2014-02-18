@@ -116,19 +116,70 @@ class RobotsRider
   
   def launchWPScan(path)
     # Launch wpscan
-    @log.debug "Launching wpscan: #{@WPSCANPATH}  -u #{path}"
-    # -ot output/scanners/#{path.gsub(/(:|\/)/,"_")} -oh output/scanners/#{path.gsub(/(:|\/)/,"_")}
-    system("#{@WPSCANPATH}  -u #{path}")
+    wpscancmd = "#{@WPSCANPATH}"
+    if !@wpscanconfig["wordlist"].nil? and File.exists?(@wpscanconfig["wordlist"])
+      wpscancmd += " --wordlist #{@wpscanconfig['wordlist']}"
+    end
+    if !@wpscanconfig["threads"].nil? and @wpscanconfig["threads"].to_i > 0
+      wpscancmd += " --threads #{@wpscanconfig['threads']}"
+    end
+    if !@wpscanconfig["username"].nil? and @wpscanconfig["username"].size > 0
+      wpscancmd += " --username #{@wpscanconfig['username']}"
+    end
+    if !@wpscanconfig["enumerate plugins"].nil? and @wpscanconfig["enumerate plugins"].to_i > 0
+      wpscancmd += " --enumerate p"
+    end
+    if !@wpscanconfig["enumerate themes"].nil? and @wpscanconfig["enumerate themes"].to_i > 0
+      wpscancmd += " --enumerate t"
+    end
+    if !@wpscanconfig["enumerate users"].nil? and @wpscanconfig["enumerate users"].to_i > 0
+      wpscancmd += " --enumerate u"
+    end
+    if !@wpscanconfig["enumerate timthumbs"].nil? and @wpscanconfig["enumerate timthumbs"].to_i > 0
+      wpscancmd += " --enumerate tt"
+    end
+    if !@wpscanconfig["proxy"].nil? and @wpscanconfig["proxy"].size.to_i > 0
+      wpscancmd += " --proxy #{@wpscanconfig["proxy"]}"
+    end
+    wpscancmd += " --url #{path} "
+    @log.debug "Launching wpscan: #{wpscancmd}"
+    puts "Launching wpscan: #{wpscancmd}"
+    # system("#{wpscancmd} > output/scanners/wpscan/#{path.gsub(/(:|\/)/,"_")")
   end
   
   #############
   
   def launchJoomscan(path)
-    # If this script downloaded the scanner previously execute the last downloaded
     # Launch joomscan
-    @log.debug "Launching Joomscan: #{@JOOMSCANPATH} -u #{path}"
-    # -ot output/scanners/#{path.gsub(/(:|\/)/,"_")} -oh output/scanners/#{path.gsub(/(:|\/)/,"_")}
-    system("#{@JOOMSCANPATH} -u #{path}")
+    jscancmd = "#{@JOOMSCANPATH}"
+    if !@joomscanconfig["htmlout"].nil? and @joomscanconfig["htmlout"].to_i > 0
+      jscancmd += " -oh output/scanners/joomscan/#{path.gsub(/(:|\/)/,'_')}.html"
+    end
+    if !@joomscanconfig["textout"].nil? and @joomscanconfig["textout"].to_i > 0
+      jscancmd += " -oh output/scanners/joomscan/#{path.gsub(/(:|\/)/,'_')}.txt"
+    end
+    if !@joomscanconfig["useragent"].nil? and @joomscanconfig["useragent"].size.to_i > 0
+      jscancmd += " -g #{@joomscanconfig["useragent"]}"
+    end
+    if !@joomscanconfig["novfingerprint"].nil? and @joomscanconfig["novfingerprint"].to_i > 0
+      jscancmd += " -nv"
+    end
+    if !@joomscanconfig["nofwdetection"].nil? and @joomscanconfig["nofwdetection"].to_i > 0
+      jscancmd += " -nf"
+    end
+    if !@joomscanconfig["pokeversion"].nil? and @joomscanconfig["pokeversion"].to_i > 0
+      jscancmd += " -pe"
+    end
+    if !@joomscanconfig["cookie"].nil? and @joomscanconfig["cookie"].size.to_i > 0
+      jscancmd += " -c #{@wpscanconfig["cookie"]}"
+    end
+    if @joomscanconfig["proxy"].nil? and @joomscanconfig["proxy"].size.to_i > 0
+      jscancmd += " -x #{@joomscanconfig["proxy"]}"
+    end
+    jscancmd += " -u #{path} "
+    @log.debug "Launching Joomscan: #{jscancmd}"
+    puts "Launching Joomscan: #{jscancmd}"
+    # system("#{jscancmd}")
   end
   
   #############
@@ -437,19 +488,18 @@ class RobotsRider
   #############
   
   def launchCMSScans(cmsname)
-    puts "Entramos en launchCMSScans con cmsname #{cmsname}"
     # If the CMS is WP or Joomla or Drupal, execute the scanners
     if cmsname.downcase.include?("joomla")
       if @joomscanconfig["enabled"].to_i != 0
-        puts "STUB: Executing Joomla Scanner"
-        # launchJoomscan("#{uri.scheme}://#{uri.host}/")
+        puts "Executing Joomla Scanner"
+        launchJoomscan("#{uri.scheme}://#{uri.host}/")
       else
         @log.debug("Not scanning with joomscan '#{uri.scheme}://#{uri.host}/'")
       end
     elsif cmsname.downcase.include?("wordpress")
       if @wpscanconfig["enabled"].to_i != 0
-        puts "STUB: Executing Wordpress scanner if enabled"
-        # launchWPScan("#{uri.scheme}://#{uri.host}/")
+        puts "Executing Wordpress scanner"
+        launchWPScan("#{uri.scheme}://#{uri.host}/")
       else
         @log.debug("Not scanning with wpscan '#{uri.scheme}://#{uri.host}/'")
       end
@@ -511,7 +561,7 @@ class RobotsRider
         # TODO: Change timeout for the HTTP connexion (https://stackoverflow.com/questions/13074779/ruby-nethttp-idle-timeout)
         robots_response = fetch(robotsurl)
         if robots_response.code.to_i == 200
-          @log.warn("It seems #{robotsurl} is accesible (#{robots_response.code}).")
+          @log.info("It seems #{robotsurl} is accesible (#{robots_response.code}).")
           print "[FOUND] (#{robots_response.code}): ".green
           puts "#{robotsurl}"
           robots_body = robots_response.body
@@ -529,7 +579,7 @@ class RobotsRider
                 if (possiblecms[1] > @@CMSCONFIDENCE)
                   print " [POSSIBLE CMS]: ".green
                   puts "#{possiblecms[0]} (#{(possiblecms[1]*100)}% coincidences)"
-                  cmsname = possiblecms[0] if cmsname.size == 0 and firstcms == 0
+                  cmsname = possiblecms[0] if cmsname.size == 0 and firstcms == 1
                 end                
               }
               @log.debug  "Searching for 'Disallowed' URLs"
@@ -629,7 +679,7 @@ class RobotsRider
           print "[NOT FOUND] (#{robots_response.code}): ".light_red
           puts "#{robotsurl}"
         end
-        # Launch CMS scan for detected
+        # Launch vulnerability scan for detected CMS
         launchCMSScans(cmsname)
       rescue URI::BadURIError, URI::InvalidURIError => e
         @log.error("The specified URL #{url} is not valid. Ignoring...")
