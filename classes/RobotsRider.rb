@@ -4,10 +4,12 @@ require 'logger'
 require 'uri'
 require 'colorize'
 require 'nokogiri'
+require 'open-uri'
 require 'fileutils'
 
 # TODO: Save in summary the results in HTML or XML
 # TODO: Add queries to archive.org API to retrieve cached entries of webpages
+# TODO: Optionaly bruteforce with wfuzz authentication to pages found with '403 Forbidden' code
 
 class RobotsRider
   
@@ -230,6 +232,41 @@ class RobotsRider
     }
     return nil
   end
+   
+  ##########################
+  
+  def findCMSByGeneratorTag(bodycontent)
+    # Busca algo como:
+    # <meta name="Generator" content="Joomla! - Copyright (C) 2005 - 2007 Open Source Matters. All rights reserved." />
+    # <meta name="generator" content="WordPress 3.7.1" />   
+    generator = nil
+    html_doc = Nokogiri::HTML(bodycontent)
+    if !html_doc.xpath("//meta[@name='Generator']").nil?
+      if html_doc.xpath("//meta[@name='Generator']").size > 0 and !html_doc.xpath("//meta[@name='Generator']")[0].nil?
+        generator = html_doc.xpath("//meta[@name='Generator']")[0]['content']
+      end
+    end
+    
+    if !html_doc.xpath("//meta[@name='generator']").nil?
+      if html_doc.xpath("//meta[@name='generator']").size > 0 and !html_doc.xpath("//meta[@name='generator']")[0].nil?
+        generator = html_doc.xpath("//meta[@name='generator']")[0]['content']
+      end
+    end
+    return generator
+  end
+  
+  ##########################
+  
+  def findCMSByPoweredByText(bodycontent)
+    # Busca algo como <p align="center">Copyright &copy; 2014 <a href="http://www.awsnabooks.org/store/index.php">Books&More</a><br />Powered by <a href="http://www.oscommerce.com" target="_blank">osCommerce</a></p> -->
+    # Busqueda en texto claro de "Powered By <a href="http://www.joomla.org">Joomla!</a>"
+    poweredby = nil
+    pbregex = /Powered By <a\s+href=.*>(.*)<\/a>/i
+    if !bodycontent.match(pbregex).nil?
+      poweredby = bodycontent.match(pbregex)[1]
+    end
+    return poweredby
+  end
   
   ##########################
   
@@ -399,6 +436,32 @@ class RobotsRider
   
   #############
   
+  def launchCMSScans(cmsname)
+    puts "Entramos en launchCMSScans con cmsname #{cmsname}"
+    # If the CMS is WP or Joomla or Drupal, execute the scanners
+    if cmsname.downcase.include?("joomla")
+      if @joomscanconfig["enabled"].to_i != 0
+        puts "STUB: Executing Joomla Scanner"
+        # launchJoomscan("#{uri.scheme}://#{uri.host}/")
+      else
+        @log.debug("Not scanning with joomscan '#{uri.scheme}://#{uri.host}/'")
+      end
+    elsif cmsname.downcase.include?("wordpress")
+      if @wpscanconfig["enabled"].to_i != 0
+        puts "STUB: Executing Wordpress scanner if enabled"
+        # launchWPScan("#{uri.scheme}://#{uri.host}/")
+      else
+        @log.debug("Not scanning with wpscan '#{uri.scheme}://#{uri.host}/'")
+      end
+    elsif cmsname.downcase.include?("drupal")
+      puts "STUB: Executing Drupal scanner"
+    else
+      puts "No scanner configured for this CMS."
+    end
+  end
+  
+  #############
+  
   def rideRobots()
     # Create folder for visited in this execution
     visiteddir = "visited/#{Time.now.strftime('%Y%m%d_%H%M%S')}/"
@@ -408,6 +471,7 @@ class RobotsRider
     # Read the file with URLs
     urlf = File.open(@urlfile,"r")
     urlf.each {|url|
+      cmsname = ""
       url.strip!
       if url.index("http://").nil? and url.index("https://").nil?
         url = "http://#{url}"
@@ -418,6 +482,28 @@ class RobotsRider
       puts "#"*(url.length + 4)
       begin
         uri = URI.parse(url)
+        # Deducing CMS by Generator Tag and Powered By Text 
+        @log.debug "Searching for Generator tag and Powered By text in #{url}..."
+        rootbody = uri.read 
+        generator = findCMSByGeneratorTag(rootbody)
+        poweredby = findCMSByPoweredByText(rootbody)
+        if !generator.nil?
+          if generator.size > 0
+            @log.debug "Found generator #{generator}..."
+            print "Found generator "
+            puts "#{generator}".green
+            cmsname = generator
+          end           
+        end        
+        if !poweredby.nil?
+          if poweredby.size > 0
+            @log.debug "Found generator #{poweredby}..."
+            print "Found generator "
+            puts "#{poweredby}".green
+            cmsname = poweredby if cmsname.size == 0
+          end           
+        end
+        # Looking for robots.txt file
         @log.debug "Searching for robots.txt file..."
         puts
         puts "Searching for robots.txt file..."
@@ -437,30 +523,13 @@ class RobotsRider
               puts "Deducing CMS from '#{robotsurl}' file"
               deducedCMSs = deducePossiblesCMS(robots_body)
               @log.info("Possibles CMS engines detected #{deducedCMSs}")
+              firstcms = 0
               deducedCMSs.each{|possiblecms|
+                firstcms += 1
                 if (possiblecms[1] > @@CMSCONFIDENCE)
                   print " [POSSIBLE CMS]: ".green
                   puts "#{possiblecms[0]} (#{(possiblecms[1]*100)}% coincidences)"
-                  # If the CMS is WP or Joomla or Drupal, execute the scanners
-                  if possiblecms[0].downcase.include?("joomla")
-                    if @joomscanconfig["enabled"].to_i != 0
-                      puts "Executing Joomla Scanner"
-                      launchJoomscan("#{uri.scheme}://#{uri.host}/")
-                    else
-                      @log.debug("Not scanning with joomscan '#{uri.scheme}://#{uri.host}/'")
-                    end
-                  elsif possiblecms[0].downcase.include?("wordpress")
-                    if @wpscanconfig["enabled"].to_i != 0
-                      puts "Executing Wordpress scanner if enabled"
-                      launchWPScan("#{uri.scheme}://#{uri.host}/")
-                    else
-                      @log.debug("Not scanning with wpscan '#{uri.scheme}://#{uri.host}/'")
-                    end
-                  elsif possiblecms[0].downcase.include?("drupal")
-                    puts "STUB: Executing Drupal scanner"
-                  else
-                    puts "No scanner configured for this CMS."
-                  end
+                  cmsname = possiblecms[0] if cmsname.size == 0 and firstcms == 0
                 end                
               }
               @log.debug  "Searching for 'Disallowed' URLs"
@@ -493,19 +562,19 @@ class RobotsRider
                           if hasJuicyFiles(prohibido)
                             @log.info "URL '#{disurl}' exists. (And it seems interesting)"
                             # puts " It seems interesting in the Path!".red
-                            puts " * [INTERESTING PATH]".red
+                            puts " |-> [INTERESTING PATH]".red
                           end
                           if !(jw = hasJuicyWords(dis_response.body)).nil?
                             @log.info "URL '#{disurl}' exists. (And it seems interesting in his body)"
                             # puts " It seems interesting in his body content! (Words found: #{jw})".red
                             jw.each{ |k,v|
-                              puts " * [INTERESTING TEXT]: '#{v}'"                              
+                              puts " |-> [INTERESTING TEXT]: '#{v}'"                              
                             }
                           end
                           if hasJuicyTitle(dis_response.body)
                             @log.info "URL '#{disurl}' exists. (And it seems interesting in his Title)"
                             # puts " It seems interesting in his page Title!".red
-                            puts " * [INTERESTING TITLE]".red
+                            puts " |-> [INTERESTING TITLE]".red
                           end
                           sf = File.open(savefile,"w")
                           sf.write(dis_response.body)
@@ -559,7 +628,9 @@ class RobotsRider
           @log.warn("It seems #{robotsurl} is not accesible (#{robots_response.code}).")
           print "[NOT FOUND] (#{robots_response.code}): ".light_red
           puts "#{robotsurl}"
-        end        
+        end
+        # Launch CMS scan for detected
+        launchCMSScans(cmsname)
       rescue URI::BadURIError, URI::InvalidURIError => e
         @log.error("The specified URL #{url} is not valid. Ignoring...")
         @log.error("Error: #{e.message}") 
@@ -622,8 +693,8 @@ class RobotsRider
 
   def cleanTheHouse()
     @log.debug("Deleting temporal files from 'tmpoutputs/'")
-    FileUtils.rm_r Dir.glob("tmpoutputs/*")
-    Dir.delete("tmpoutputs/")
+    #FileUtils.rm_r Dir.glob("tmpoutputs/*")
+    #Dir.delete("tmpoutputs/")
   end
   
 end # class RobotsRider

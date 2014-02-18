@@ -40,7 +40,7 @@ def parseOptions()
     opts.on( '-w', '--[no-]wfuzz', "Use wfuzz program to fuzz wildcards in the disallowed entries [Default: False]" ) do |fuzz|
       options[:fuzz] = fuzz
     end
-    opts.on( '-o', '--output', 'TODO: Save the summary of the execution to this beautiful HTML file' ) do |ofile|
+    opts.on( '-o', '--output [OFILE]', 'TODO: Save the summary of the execution to this beautiful HTML file' ) do |ofile|
       options[:outputfile] = ofile
     end
     opts.on( '-L', '--loglevel [LOGLEVEL]', ["DEBUG","INFO","WARN","ERROR","FATAL"], 'Set loggin level (DEBUG, INFO, WARN, ERROR, FATAL)  [default: DEBUG]' ) do |loglevel|
