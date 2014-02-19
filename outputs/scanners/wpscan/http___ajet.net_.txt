@@ -10,53 +10,15 @@ ____________________________________________________
  Sponsored by the RandomStorm Open Source Initiative
 _____________________________________________________
 
-| URL: http://ajet.net/
-| Started on Wed Feb 19 13:38:39 2014
-
-[32m[+][0m The WordPress theme in use is AJET v1.1
-[31m[!][0m The WordPress 'http://ajet.net/readme.html' file exists
-[32m[+][0m XML-RPC Interface available under http://ajet.net/xmlrpc.php
-[32m[+][0m WordPress version 3.8.1 identified from meta generator
-
-[32m[+][0m Enumerating plugins from passive detection ... 
-10 found :
-
- | Name: category-specific-rss-feed-menu
- | Location: http://ajet.net/wp-content/plugins/category-specific-rss-feed-menu/
-
- | Name: cforms
- | Location: http://ajet.net/wp-content/plugins/cforms/
-
- | Name: google-analyticator
- | Location: http://ajet.net/wp-content/plugins/google-analyticator/
-
- | Name: hide-this-part
- | Location: http://ajet.net/wp-content/plugins/hide-this-part/
-
- | Name: jetpack
- | Location: http://ajet.net/wp-content/plugins/jetpack/
-
- | Name: really-simple-facebook-twitter-share-buttons
- | Location: http://ajet.net/wp-content/plugins/really-simple-facebook-twitter-share-buttons/
-
- | Name: simple-lightbox
- | Location: http://ajet.net/wp-content/plugins/simple-lightbox/
-
- | Name: sitemap
- | Location: http://ajet.net/wp-content/plugins/sitemap/
-
- | Name: wp-polls
- | Location: http://ajet.net/wp-content/plugins/wp-polls/
-
- | Name: wpng-calendar
- | Location: http://ajet.net/wp-content/plugins/wpng-calendar/
-
-[32m[+][0m Enumerating usernames ...
-
-[32m[+][0m We found the following 2 username/s :
-
- | id: 1 | name: ajet-admin-kevin | nickname: empty                 
- | id: 3 | name: Executive AJET   | nickname: Executive AJET | AJET 
-
-[32m[+] Finished at Wed Feb 19 13:38:57 2014[0m
-[32m[+] Elapsed time: 00:00:17[0m
+[31m[ERROR] Permission denied - /usr/share/wpscan/cache/browser/86d25acd5a0e3ca1a29846156eceef90bd2f0a66[0m
+[31mTrace :[0m
+[31m/usr/share/wpscan/lib/cache_file_store.rb:46:in `delete'
+/usr/share/wpscan/lib/cache_file_store.rb:46:in `block in clean'
+/usr/share/wpscan/lib/cache_file_store.rb:45:in `each'
+/usr/share/wpscan/lib/cache_file_store.rb:45:in `clean'
+/usr/share/wpscan/lib/browser.rb:52:in `initialize'
+/usr/share/wpscan/lib/browser.rb:62:in `new'
+/usr/share/wpscan/lib/browser.rb:62:in `instance'
+/usr/share/wpscan/lib/wpscan/wp_target.rb:43:in `initialize'
+/usr/bin/wpscan:51:in `new'
+/usr/bin/wpscan:51:in `<main>'[0m

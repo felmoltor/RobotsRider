@@ -38,20 +38,3 @@ X-Powered-By: PHP/5.2.6-1+lenny13
 
 ## Fingerprinting in progress ...
 
-~Generic version family ....... [1.5.x]
-
-~1.5.x htaccess.txt revealed [1.5.4 - 1.5.14]
-~1.5.x configuration.php-dist revealed [1.5.10 - 1.5.14]
-~1.5.x en-GB.xml revealed [1.5.9 - 1.5.14]
-~1.5.x en-GB.ini revealed [1.5.12 - 1.5.14]
-~1.5.x admin en-GB.com_config.ini revealed [1.5.12 - 1.5.14]
-~1.5.x admin en-GB.ini revealed [1.5.12 - 1.5.14]
-~1.5.x adminlists.html revealed [1.5.7 - 1.5.14]
-
-* Deduced version range is : [1.5.12 - 1.5.14]
-
-## Fingerprinting done.
-
-~[*] Time Taken: 33 sec
-~[*] Send bugs, suggestions, contributions to joomscan@yehg.net
-
