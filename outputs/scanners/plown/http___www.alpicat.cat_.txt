@@ -1,0 +1,9 @@
+
+Starting Plown version 0.3 (https://unweb.me/projects/open-source/plown)
+Plown report for http://www.alpicat.cat
+Brute Force mode, searching for valid username/password pairs
+[*] 2 user(s) loaded.
+[*] 3 password(s) loaded.
+[*] Brute Forcing url http://www.alpicat.cat/login_form with 5 threads
+finished 5 threads. Remaining: 1. Pairs found: 0
+No valid pairs are found

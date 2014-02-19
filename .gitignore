@@ -1,5 +1,6 @@
 .project
 outputs/visited/*
+outputs/scanners/*.txt
 logs/*
 tmpoutputs/*
 reales/

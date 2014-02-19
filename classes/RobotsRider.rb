@@ -17,7 +17,7 @@ require 'fileutils'
 class RobotsRider
   
   def initialize(options)
-    @@CMSCONFIDENCE = 0.75
+    @@CMSCONFIDENCE = 0.6
     @wpscanconfig = readWPScanConfig()
     @joomscanconfig = readJoomscanConfig()
     @plownconfig = readPlownConfig()
@@ -128,24 +128,24 @@ class RobotsRider
   #############
   
   def readWPScanConfig()
-    wpscanconfig = eval(File.open("config/scanners/wpscan.cfg","r").read)
+    eval(File.open("config/scanners/wpscan.cfg","r").read)
   end
   
   #############
   
   def readJoomscanConfig()
-    joomscanconfig = eval(File.open("config/scanners/joomscan.cfg","r").read)
+    eval(File.open("config/scanners/joomscan.cfg","r").read)
   end
   
   #############
   
   def readPlownConfig()
-    joomscanconfig = eval(File.open("config/scanners/plown.cfg","r").read)
+    eval(File.open("config/scanners/plown.cfg","r").read)
   end
   #############
   
   def readDPScanConfig()
-    joomscanconfig = eval(File.open("config/scanners/dpscan.cfg","r").read)
+    eval(File.open("config/scanners/dpscan.cfg","r").read)
   end
   
   #############
@@ -163,7 +163,10 @@ class RobotsRider
     @log.debug "Launching DPScan #{dpscancmd}"
     puts "Launching DPScan. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
     dpoutput = %x(#{dpscancmd} > #{outfile})
-    puts "Exit status of the scan #{$?.exitstatus}"
+        @log.info("Exit status of the scan #{$?.exitstatus}")
+    if $?.exitstatus != 0
+      puts "There was an error doing this scan!".red
+    end
   end
   
   #############
@@ -171,7 +174,7 @@ class RobotsRider
   def launchPlown(path)
     outfile = "#{File.expand_path(File.dirname(__FILE__))}/../outputs/scanners/plown/#{path.gsub(/(:|\/)/,"_")}.txt"
     # Launch plown
-    plowncmd = "#{@plowpath}"
+    plowncmd = "#{@plownpath}"
     if !@plownconfig["threads"].nil? and @plownconfig["threads"].to_i > 0
       plowncmd += " -T #{@plownconfig['threads']}"
     end
@@ -188,13 +191,16 @@ class RobotsRider
     @log.debug "Launching plown: #{plowncmd}"
     puts "Launching Plown. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
     plownout = %x(#{plowncmd} > #{outfile})
-    puts "Exit status of the scan #{$?.exitstatus}"
+        @log.info("Exit status of the scan #{$?.exitstatus}")
+    if $?.exitstatus != 0
+      puts "There was an error doing this scan!".red
+    end
   end
   
   #############
   
   def launchWPScan(path)
-    outfile = "#{File.expand_path(File.dirname(__FILE__))}/../outputs/scanners/joomscan/#{path.gsub(/(:|\/)/,"_")}.txt"
+    outfile = "#{File.expand_path(File.dirname(__FILE__))}/../outputs/scanners/wpscan/#{path.gsub(/(:|\/)/,"_")}.txt"
     # Launch wpscan
     wpscancmd = "#{@wpscanpath}"
     if !@wpscanconfig["wordlist"].nil? and File.exists?(@wpscanconfig["wordlist"])
@@ -225,7 +231,10 @@ class RobotsRider
     @log.debug "Launching wpscan: #{wpscancmd}"
     puts "Launching Joomscan. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
     wpoutput = %x(#{wpscancmd} > #{outfile})
-    puts "Exit status of the scan #{$?.exitstatus}"
+    @log.info("Exit status of the scan #{$?.exitstatus}")
+    if $?.exitstatus != 0
+      puts "There was an error doing this scan!".red
+    end
   end
   
   #############
@@ -234,7 +243,6 @@ class RobotsRider
     outfile = "#{File.expand_path(File.dirname(__FILE__))}/../outputs/scanners/joomscan/#{path.gsub(/(:|\/)/,"_")}.txt"
     # Launch joomscan
     jscancmd = "#{@joomscanpath}"
-    puts jscancmd
     if !@joomscanconfig["htmlout"].nil? and @joomscanconfig["htmlout"].to_i > 0
       jscancmd += " -oh" # #{File.expand_path(File.dirname(__FILE__))}/../outputs/scanners/joomscan/#{path.gsub(/(:|\/)/,'_')}.html"
     end
@@ -254,7 +262,7 @@ class RobotsRider
       jscancmd += " -pe"
     end
     if !@joomscanconfig["cookie"].nil? and @joomscanconfig["cookie"].size.to_i > 0
-      jscancmd += " -c #{@wpscanconfig["cookie"]}"
+      jscancmd += " -c #{@joomscanconfig["cookie"]}"
     end
     if @joomscanconfig["proxy"].nil? and @joomscanconfig["proxy"].size.to_i > 0
       jscancmd += " -x #{@joomscanconfig["proxy"]}"
@@ -263,7 +271,10 @@ class RobotsRider
     @log.debug "Launching Joomscan: #{jscancmd}"
     puts "Launching Joomscan. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
     joutput = %x(#{jscancmd} > #{outfile})
-    puts "Exit status of the scan #{$?.exitstatus}" 
+        @log.info("Exit status of the scan #{$?.exitstatus}")
+    if $?.exitstatus != 0
+      puts "There was an error doing this scan!".red
+    end
   end
   
   #############
@@ -617,11 +628,11 @@ class RobotsRider
       if @dpscanconfig["enabled"].to_i != 0
         launchDPScan("#{uri.scheme}://#{uri.host}/")
       else
-        @log.debug("Not scanning with wpscan '#{uri.scheme}://#{uri.host}/'")
+        @log.debug("Not scanning with dpscan '#{uri.scheme}://#{uri.host}/'")
       end
     elsif cmsname.downcase.include?("plone")
       if @plownconfig["enabled"].to_i != 0
-        launchPlowns("#{uri.scheme}://#{uri.host}/")
+        launchPlown("#{uri.scheme}://#{uri.host}/")
       else
         @log.debug("Not scanning with plown '#{uri.scheme}://#{uri.host}/'")
       end
@@ -778,11 +789,11 @@ class RobotsRider
                             end
                           else
                             @log.info("Disallowed entry '#{disurl}' has more than one wildcard '*'. Not fuzzing.")
-                            puts "Disallowed entry '#{disurl}' has more than one wildcard '*'. Not fuzzing."
+                            # puts "Disallowed entry '#{disurl}' has more than one wildcard '*'. Not fuzzing."
                           end 
                         else
                           @log.info("Disallowed entry has wildcards '*'. Not visiting.")
-                          puts "Disallowed entry '#{disurl}' has wildcards '*'. Not visiting."
+                          # puts "Disallowed entry '#{disurl}' has wildcards '*'. Not visiting."
                         end
                       end
                     end
