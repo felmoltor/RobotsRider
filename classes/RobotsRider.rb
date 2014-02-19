@@ -10,15 +10,40 @@ require 'fileutils'
 # TODO: Save in summary the results in HTML or XML
 # TODO: Add queries to archive.org API to retrieve cached entries of webpages
 # TODO: Optionaly bruteforce with wfuzz authentication to pages found with '403 Forbidden' code
+# TODO: Add Plown vuln scanner for Plone CMS https://github.com/unweb/plown
+# TODO: Add CMS Xoomp and Nuke cms scan support with http://sourceforge.net/projects/odz/
+# TODO: Add threads to launch CMS Scans.
 
 class RobotsRider
   
   def initialize(options)
     @@CMSCONFIDENCE = 0.75
-    @WPSCANPATH = getWPScanPath()
-    @JOOMSCANPATH = getJoomscanPath()
     @wpscanconfig = readWPScanConfig()
     @joomscanconfig = readJoomscanConfig()
+    @plownconfig = readPlownConfig()
+    @dpscanconfig = readDPScanConfig()
+    
+    # Get executable path if not defined in the config files
+    if !@wpscanconfig["path"].nil? and @wpscanconfig["path"].size > 0 and File.exists?(@wpscanconfig["path"])
+      @wpscanpath = @wpscanconfig["path"]
+    else
+      @wpscanpath = getWPScanPath()
+    end
+    if !@joomscanconfig["path"].nil? and @joomscanconfig["path"].size > 0 and File.exists?(@joomscanconfig["path"])
+      @joomscanpath = @joomscanconfig["path"]
+    else
+      @joomscanpath = getJoomscanPath()
+    end
+    if !@plownconfig["path"].nil? and @plownconfig["path"].size > 0 and File.exists?(@plownconfig["path"])
+      @plownpath = @plownconfig["path"]
+    else
+      @plownpath = getPlownPath()
+    end
+    if !@dpscanconfig["path"].nil? and @dpscanconfig["path"].size > 0 and File.exists?(@dpscanconfig["path"])
+      @dpscanpath = @dpscanconfig["path"]
+    else
+      @dpscanpath = getDPScanPath()
+    end
     
     @urlfile = options[:urlfile]
     @domain = options[:domain]
@@ -103,20 +128,75 @@ class RobotsRider
   #############
   
   def readWPScanConfig()
-    wpscanconfig = eval(File.open("config/wpscan.cfg","r").read)
+    wpscanconfig = eval(File.open("config/scanners/wpscan.cfg","r").read)
   end
   
   #############
   
   def readJoomscanConfig()
-    joomscanconfig = eval(File.open("config/joomscan.cfg","r").read)
+    joomscanconfig = eval(File.open("config/scanners/joomscan.cfg","r").read)
+  end
+  
+  #############
+  
+  def readPlownConfig()
+    joomscanconfig = eval(File.open("config/scanners/plown.cfg","r").read)
+  end
+  #############
+  
+  def readDPScanConfig()
+    joomscanconfig = eval(File.open("config/scanners/dpscan.cfg","r").read)
+  end
+  
+  #############
+  
+  def launchDPScan(path)
+    outfile = "#{File.expand_path(File.dirname(__FILE__))}/../outputs/scanners/dpscan/#{path.gsub(/(:|\/)/,"_")}.txt"
+    # Launch wpscan
+    dpscancmd = "#{@dpscanpath} #{path}"
+    if !@dpscanconfig["user"].nil? and @dpscanconfig["user"].size.to_i > 0
+      dpscancmd += " #{@dpscanconfig['user']}"
+    end
+    if !@dpscanconfig["password"].nil? and @dpscanconfig["password"].size.to_i > 0
+      dpscancmd += " #{@dpscanconfig['password']}"
+    end
+    @log.debug "Launching DPScan #{dpscancmd}"
+    puts "Launching DPScan. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
+    dpoutput = %x(#{dpscancmd} > #{outfile})
+    puts "Exit status of the scan #{$?.exitstatus}"
+  end
+  
+  #############
+  
+  def launchPlown(path)
+    outfile = "#{File.expand_path(File.dirname(__FILE__))}/../outputs/scanners/plown/#{path.gsub(/(:|\/)/,"_")}.txt"
+    # Launch plown
+    plowncmd = "#{@plowpath}"
+    if !@plownconfig["threads"].nil? and @plownconfig["threads"].to_i > 0
+      plowncmd += " -T #{@plownconfig['threads']}"
+    end
+    if !@plownconfig["bruteforce"].nil? and @plownconfig["bruteforce"].to_i > 0
+      plowncmd += " -b"
+    end
+    if !@plownconfig["userlist"].nil? and @plownconfig["userlist"].size.to_i > 0 and File.exists?(@plownconfig["userlist"])
+      plowncmd += " -U #{@plownconfig["userlist"]}"
+    end
+    if !@plownconfig["passwordlist"].nil? and @plownconfig["passwordlist"].size.to_i > 0 and File.exists?(@plownconfig["passwordlist"])
+      plowncmd += " -P #{@plownconfig["passwordlist"]}"
+    end
+    plowncmd += " #{path} "
+    @log.debug "Launching plown: #{plowncmd}"
+    puts "Launching Plown. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
+    plownout = %x(#{plowncmd} > #{outfile})
+    puts "Exit status of the scan #{$?.exitstatus}"
   end
   
   #############
   
   def launchWPScan(path)
+    outfile = "#{File.expand_path(File.dirname(__FILE__))}/../outputs/scanners/joomscan/#{path.gsub(/(:|\/)/,"_")}.txt"
     # Launch wpscan
-    wpscancmd = "#{@WPSCANPATH}"
+    wpscancmd = "#{@wpscanpath}"
     if !@wpscanconfig["wordlist"].nil? and File.exists?(@wpscanconfig["wordlist"])
       wpscancmd += " --wordlist #{@wpscanconfig['wordlist']}"
     end
@@ -143,23 +223,26 @@ class RobotsRider
     end
     wpscancmd += " --url #{path} "
     @log.debug "Launching wpscan: #{wpscancmd}"
-    puts "Launching wpscan: #{wpscancmd}"
-    # system("#{wpscancmd} > output/scanners/wpscan/#{path.gsub(/(:|\/)/,"_")")
+    puts "Launching Joomscan. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
+    wpoutput = %x(#{wpscancmd} > #{outfile})
+    puts "Exit status of the scan #{$?.exitstatus}"
   end
   
   #############
   
   def launchJoomscan(path)
+    outfile = "#{File.expand_path(File.dirname(__FILE__))}/../outputs/scanners/joomscan/#{path.gsub(/(:|\/)/,"_")}.txt"
     # Launch joomscan
-    jscancmd = "#{@JOOMSCANPATH}"
+    jscancmd = "#{@joomscanpath}"
+    puts jscancmd
     if !@joomscanconfig["htmlout"].nil? and @joomscanconfig["htmlout"].to_i > 0
-      jscancmd += " -oh output/scanners/joomscan/#{path.gsub(/(:|\/)/,'_')}.html"
+      jscancmd += " -oh" # #{File.expand_path(File.dirname(__FILE__))}/../outputs/scanners/joomscan/#{path.gsub(/(:|\/)/,'_')}.html"
     end
     if !@joomscanconfig["textout"].nil? and @joomscanconfig["textout"].to_i > 0
-      jscancmd += " -oh output/scanners/joomscan/#{path.gsub(/(:|\/)/,'_')}.txt"
+      jscancmd += " -ot" # #{File.expand_path(File.dirname(__FILE__))}/../outputs/scanners/joomscan/#{path.gsub(/(:|\/)/,'_')}.txt"
     end
     if !@joomscanconfig["useragent"].nil? and @joomscanconfig["useragent"].size.to_i > 0
-      jscancmd += " -g #{@joomscanconfig["useragent"]}"
+      jscancmd += " -g '#{@joomscanconfig["useragent"]}'"
     end
     if !@joomscanconfig["novfingerprint"].nil? and @joomscanconfig["novfingerprint"].to_i > 0
       jscancmd += " -nv"
@@ -178,8 +261,9 @@ class RobotsRider
     end
     jscancmd += " -u #{path} "
     @log.debug "Launching Joomscan: #{jscancmd}"
-    puts "Launching Joomscan: #{jscancmd}"
-    # system("#{jscancmd}")
+    puts "Launching Joomscan. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
+    joutput = %x(#{jscancmd} > #{outfile})
+    puts "Exit status of the scan #{$?.exitstatus}" 
   end
   
   #############
@@ -255,7 +339,35 @@ class RobotsRider
     }
     return nil
   end
-   
+ 
+  ##########################
+  
+  def getDPScanPath()
+    # Check if wfuzz is in the path
+    whereisoutput = `whereis DPScan`
+    thpaths = whereisoutput.split(":")[1]
+    thpaths.split(" ").each {|path|
+      if `file -i #{path}`.split(":")[1].strip.split(";")[0].strip == "text/x-python"
+        return path
+      end      
+    }
+    return nil
+  end
+  
+  ##########################
+  
+  def getPlownPath()
+    # Check if wfuzz is in the path
+    whereisoutput = `whereis plown`
+    thpaths = whereisoutput.split(":")[1]
+    thpaths.split(" ").each {|path|
+      if `file -i #{path}`.split(":")[1].strip.split(";")[0].strip == "text/x-python"
+        return path
+      end      
+    }
+    return nil
+  end
+  
   ##########################
   
   def getWfuzzPath()
@@ -487,24 +599,33 @@ class RobotsRider
   
   #############
   
-  def launchCMSScans(cmsname)
+  def launchCMSScans(cmsname,uri)
     # If the CMS is WP or Joomla or Drupal, execute the scanners
     if cmsname.downcase.include?("joomla")
       if @joomscanconfig["enabled"].to_i != 0
-        puts "Executing Joomla Scanner"
         launchJoomscan("#{uri.scheme}://#{uri.host}/")
       else
         @log.debug("Not scanning with joomscan '#{uri.scheme}://#{uri.host}/'")
       end
     elsif cmsname.downcase.include?("wordpress")
       if @wpscanconfig["enabled"].to_i != 0
-        puts "Executing Wordpress scanner"
         launchWPScan("#{uri.scheme}://#{uri.host}/")
       else
         @log.debug("Not scanning with wpscan '#{uri.scheme}://#{uri.host}/'")
       end
     elsif cmsname.downcase.include?("drupal")
-      puts "STUB: Executing Drupal scanner"
+      if @dpscanconfig["enabled"].to_i != 0
+        launchDPScan("#{uri.scheme}://#{uri.host}/")
+      else
+        @log.debug("Not scanning with wpscan '#{uri.scheme}://#{uri.host}/'")
+      end
+    elsif cmsname.downcase.include?("plone")
+      if @plownconfig["enabled"].to_i != 0
+        launchPlowns("#{uri.scheme}://#{uri.host}/")
+      else
+        @log.debug("Not scanning with plown '#{uri.scheme}://#{uri.host}/'")
+      end
+      # If the user has no plown installed tell him to download it from https://github.com/unweb/plown
     else
       puts "No scanner configured for this CMS."
     end
@@ -514,7 +635,7 @@ class RobotsRider
   
   def rideRobots()
     # Create folder for visited in this execution
-    visiteddir = "visited/#{Time.now.strftime('%Y%m%d_%H%M%S')}/"
+    visiteddir = "outputs/visited/#{Time.now.strftime('%Y%m%d_%H%M%S')}/"
     if @visit
       Dir.mkdir(visiteddir)
     end    
@@ -656,12 +777,12 @@ class RobotsRider
                               }                              
                             end
                           else
-                            @log.info("Disallowed entry has more than one wildcard '*'. Not fuzzing.")
-                            puts "Disallowed entry has more than one wildcard '*'. Not fuzzing."
+                            @log.info("Disallowed entry '#{disurl}' has more than one wildcard '*'. Not fuzzing.")
+                            puts "Disallowed entry '#{disurl}' has more than one wildcard '*'. Not fuzzing."
                           end 
                         else
                           @log.info("Disallowed entry has wildcards '*'. Not visiting.")
-                          puts "Disallowed entry has wildcards '*'. Not visiting."
+                          puts "Disallowed entry '#{disurl}' has wildcards '*'. Not visiting."
                         end
                       end
                     end
@@ -680,7 +801,7 @@ class RobotsRider
           puts "#{robotsurl}"
         end
         # Launch vulnerability scan for detected CMS
-        launchCMSScans(cmsname)
+        launchCMSScans(cmsname,uri)
       rescue URI::BadURIError, URI::InvalidURIError => e
         @log.error("The specified URL #{url} is not valid. Ignoring...")
         @log.error("Error: #{e.message}") 

@@ -1,5 +1,5 @@
 .project
-visited/*
+outputs/visited/*
 logs/*
 tmpoutputs/*
 reales/

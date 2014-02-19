@@ -1,0 +1,62 @@
+____________________________________________________
+ __          _______   _____                  
+ \ \        / /  __ \ / ____|                 
+  \ \  /\  / /| |__) | (___   ___  __ _ _ __  
+   \ \/  \/ / |  ___/ \___ \ / __|/ _` | '_ \ 
+    \  /\  /  | |     ____) | (__| (_| | | | |
+     \/  \/   |_|    |_____/ \___|\__,_|_| |_| v2.0rNA
+
+    WordPress Security Scanner by the WPScan Team
+ Sponsored by the RandomStorm Open Source Initiative
+_____________________________________________________
+
+| URL: http://ajet.net/
+| Started on Wed Feb 19 13:53:11 2014
+
+[32m[+][0m The WordPress theme in use is AJET v1.1
+[31m[!][0m The WordPress 'http://ajet.net/readme.html' file exists
+[32m[+][0m XML-RPC Interface available under http://ajet.net/xmlrpc.php
+[32m[+][0m WordPress version 3.8.1 identified from meta generator
+
+[32m[+][0m Enumerating plugins from passive detection ... 
+10 found :
+
+ | Name: category-specific-rss-feed-menu
+ | Location: http://ajet.net/wp-content/plugins/category-specific-rss-feed-menu/
+
+ | Name: cforms
+ | Location: http://ajet.net/wp-content/plugins/cforms/
+
+ | Name: google-analyticator
+ | Location: http://ajet.net/wp-content/plugins/google-analyticator/
+
+ | Name: hide-this-part
+ | Location: http://ajet.net/wp-content/plugins/hide-this-part/
+
+ | Name: jetpack
+ | Location: http://ajet.net/wp-content/plugins/jetpack/
+
+ | Name: really-simple-facebook-twitter-share-buttons
+ | Location: http://ajet.net/wp-content/plugins/really-simple-facebook-twitter-share-buttons/
+
+ | Name: simple-lightbox
+ | Location: http://ajet.net/wp-content/plugins/simple-lightbox/
+
+ | Name: sitemap
+ | Location: http://ajet.net/wp-content/plugins/sitemap/
+
+ | Name: wp-polls
+ | Location: http://ajet.net/wp-content/plugins/wp-polls/
+
+ | Name: wpng-calendar
+ | Location: http://ajet.net/wp-content/plugins/wpng-calendar/
+
+[32m[+][0m Enumerating usernames ...
+
+[32m[+][0m We found the following 2 username/s :
+
+ | id: 1 | name: ajet-admin-kevin | nickname: empty                 
+ | id: 3 | name: Executive AJET   | nickname: Executive AJET | AJET 
+
+[32m[+] Finished at Wed Feb 19 13:53:29 2014[0m
+[32m[+] Elapsed time: 00:00:17[0m

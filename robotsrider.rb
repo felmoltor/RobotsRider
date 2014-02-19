@@ -9,6 +9,8 @@ require 'fileutils'
 # TODO: Save in summary the results in HTML or XML
 # TODO: Add queries to archive.org API to retrieve cached entries of webpages
 
+$SCRIPT_VERSION = "0.3"
+
 ##########################
 
 def parseOptions()
@@ -96,7 +98,7 @@ def printBanner()
 ^^^^^^^"""^^^^^^""^^^^^^^^^^^^^^^^^^^^^^^^^^^
 }
   puts " ***************************************".cyan
-  puts " *          ROBOTS RIDER v0.2          *".cyan
+  puts " *          ROBOTS RIDER v#{$SCRIPT_VERSION}          *".cyan
   puts " *        Author: Felipe Molina        *".cyan
   puts " *         Twitter: @felmoltor         *".cyan
   puts " *                                     *".cyan
