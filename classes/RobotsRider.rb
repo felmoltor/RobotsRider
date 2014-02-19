@@ -8,9 +8,7 @@ require 'open-uri'
 require 'fileutils'
 
 # TODO: Save in summary the results in HTML or XML
-# TODO: Add queries to archive.org API to retrieve cached entries of webpages
 # TODO: Optionaly bruteforce with wfuzz authentication to pages found with '403 Forbidden' code
-# TODO: Add Plown vuln scanner for Plone CMS https://github.com/unweb/plown
 # TODO: Add CMS Xoomp and Nuke cms scan support with http://sourceforge.net/projects/odz/
 # TODO: Add threads to launch CMS Scans.
 
@@ -162,7 +160,7 @@ class RobotsRider
     end
     @log.debug "Launching DPScan #{dpscancmd}"
     puts "Launching DPScan. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
-    dpoutput = %x(#{dpscancmd} > #{outfile})
+    dpoutput = %x(python #{dpscancmd} > #{outfile})
         @log.info("Exit status of the scan #{$?.exitstatus}")
     if $?.exitstatus != 0
       puts "There was an error doing this scan!".red
@@ -229,7 +227,7 @@ class RobotsRider
     end
     wpscancmd += " --url #{path} "
     @log.debug "Launching wpscan: #{wpscancmd}"
-    puts "Launching Joomscan. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
+    puts "Launching WPScan. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
     wpoutput = %x(#{wpscancmd} > #{outfile})
     @log.info("Exit status of the scan #{$?.exitstatus}")
     if $?.exitstatus != 0
@@ -444,12 +442,71 @@ class RobotsRider
   
   ##########################
   
+  def processHtmlOutput(thtmpfile,resultfile)
+    fdomain = File.open(thtmpfile)
+    html_doc = Nokogiri::HTML(fdomain)
+    fdomain.close
+    # Busca los <li> <ul class="softlist"> y <ul class="pathslist">   
+    hostfound = []
+    html_doc.xpath("//li[@class='softitem']").each { |sitem|
+      # puts "softitem: #{sitem.content}"
+      hostfound << sitem.content.split(":")[1]
+    }
+    html_doc.xpath("//li[@class='pathitem']").each { |pitem|
+      # puts "pathitem #{pitem.content}"    
+      hostfound << pitem.content.split(":")[1]       
+    }
+    hostfound = hostfound.sort.uniq
+    urlsfile = File.open(resultfile,"w")
+    hostfound.each {|h|
+      domainfilter = @domain.gsub(/\..{2,4}$/,"")
+      if h.include?(domainfilter)
+        urlsfile.puts("http://#{h}")
+      end
+    }  
+    urlsfile.close
+  end
+  
+  ##########################
+  
+  def processRawTextOutput(cmdoutput,resultfile)
+    
+    fdomain = File.open(cmdoutput)
+    hostfound = []
+    
+    ipname_1 = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(.*)$/
+    ipname_2 = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+(.*)$/
+    
+    fdomain.each{|dline|
+      m1 = dline.match(ipname_1)
+      if !m1.nil? and !m1[2].nil?
+        hostfound << m1[2]        
+      end
+      m2 = dline.match(ipname_2)
+      if !m2.nil? and !m2[2].nil?
+        hostfound << m2[2]        
+      end
+    }
+    urlsfile = File.open(resultfile,"w")
+    hostfound = hostfound.sort.uniq
+    hostfound.each {|h|
+      domainfilter = @domain.gsub(/\..{2,4}$/,"")
+      if h.include?(domainfilter)
+        urlsfile.puts("http://#{h}")
+      end
+    }
+    urlsfile.close
+  end  
+  
+  ##########################
+  
   def queryTheHarvester()
     # This function calls the programwhereis theharvester theHarvester automaticaly to harvest URLs from a domain
     # Instead of providing the program with a list of urls we can directly ask for a domain
-    resultfile = "tmpoutputs/harvester_output_#{@domain}.list"
-    thtmpfile = "tmpoutputs/#{@domain}.html"
-    thbin = getTheHarvesterPath
+    resultfile = "/tmp/harvester_output_#{@domain.gsub(/[\/|:]/,"_")}.list"
+    cmdoutput = "/tmp/harvester_output_#{@domain.gsub(/[\/|:]/,"_")}.out"
+    thtmpfile = "/tmp/#{@domain.gsub(/[\/|:]/,"_")}.html"
+    thbin = getTheHarvesterPath()
     
     if !thbin.nil?
       # Create an URL file with the outuput of the harvester for hosts
@@ -458,31 +515,17 @@ class RobotsRider
       puts "Searching with 'theharvester' information about the domain '#{@domain}'. Please, be patient."
       @log.info "Searching with 'theharvester' information about the domain #{@domain}"
       @log.debug " #{cmdline}"
-      salida = `#{cmdline}`
+      salida = %x(#{cmdline} > #{cmdoutput})
+      # Sometimes theHarvester does not work properly (a.k.a. Bug) and does not save the output in the file
+      # In this case we'll explore the text output of the command
       if File.exists?(thtmpfile)
-        fdomain = File.open(thtmpfile)
-        html_doc = Nokogiri::HTML(fdomain)
-        fdomain.close
-        # Busca los <li> <ul class="softlist"> y <ul class="pathslist">   
-        hostfound = []
-        html_doc.xpath("//li[@class='softitem']").each { |sitem|
-          # puts "softitem: #{sitem.content}"
-          hostfound << sitem.content.split(":")[1]
-        }
-        html_doc.xpath("//li[@class='pathitem']").each { |pitem|
-          # puts "pathitem #{pitem.content}"    
-          hostfound << pitem.content.split(":")[1]       
-        }
-        hostfound = hostfound.sort.uniq
-        urlsfile = File.open(resultfile,"w")
-        hostfound.each {|h|
-          domainfilter = @domain.gsub(/\..{2,4}$/,"")
-          if h.include?(domainfilter)
-            urlsfile.puts("http://#{h}")
-          end
-        }  
-        urlsfile.close
-        File.delete(thtmpfile)     
+        @log.debug("theHarvester properly and saved the results in #{thtmpfile}. Exploring results from html output...")
+        processHtmlOutput(thtmpfile,resultfile)  
+        File.delete(thtmpfile)   
+      elsif (File.exists?(cmdoutput))
+        @log.warn("theHarvester didn't work properly and did not save the results in #{thtmpfile}. Exploring incomplete results from text output...")
+        processRawTextOutput(cmdoutput,resultfile)       
+        File.delete(cmdoutput)    
       else
         @log.error "The tool 'theHarvester' didn't create the file '#{@domain}.html'"
         puts "The tool 'theHarvester' didn't create the file'#{@domain}.html (Don't blame me!)'".red
@@ -506,7 +549,7 @@ class RobotsRider
     defaultthreads =  10
     defaultignorec = "404,400"
     clean_disentry = disentry.gsub("$","")
-    disentry_output = "tmpoutputs/#{clean_disentry.gsub("/","_").gsub(":","").gsub("*","FUZZ")}.html"
+    disentry_output = "/tmp/#{clean_disentry.gsub("/","_").gsub(":","").gsub("*","FUZZ")}.html"
     wfuzzcmd = "#{wfbin} -o html -t $threads$ -s $delay$ --hc $ignorec$ -z file,$dict$ #{clean_disentry.gsub("*","FUZZ")} 2> #{disentry_output}"
     fuzzdict = {}
     
@@ -812,7 +855,12 @@ class RobotsRider
           puts "#{robotsurl}"
         end
         # Launch vulnerability scan for detected CMS
-        launchCMSScans(cmsname,uri)
+        if cmsname.size > 0
+          launchCMSScans(cmsname,uri)
+        else
+          @log.info("No CMS was detected form #{uri}. Skipping vulnerability scan.")
+          puts "No CMS was detected form #{uri}. Skipping vulnerability scan.".red
+        end
       rescue URI::BadURIError, URI::InvalidURIError => e
         @log.error("The specified URL #{url} is not valid. Ignoring...")
         @log.error("Error: #{e.message}") 
@@ -872,11 +920,5 @@ class RobotsRider
   end
   
   ##########################
-
-  def cleanTheHouse()
-    @log.debug("Deleting temporal files from 'tmpoutputs/'")
-    #FileUtils.rm_r Dir.glob("tmpoutputs/*")
-    #Dir.delete("tmpoutputs/")
-  end
   
 end # class RobotsRider

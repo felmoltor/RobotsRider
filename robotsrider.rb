@@ -75,36 +75,50 @@ def initializeFolders()
   if !Dir.exists?("logs")
     Dir.mkdir("logs")
   end
-  if !Dir.exists?("tmpoutputs")
-    Dir.mkdir("tmpoutputs")
+  if !Dir.exists?("outputs/scanners/dpscan")
+    FileUtils.mkdir_p("outputs/scanners/dpscan")
+  end
+  if !Dir.exists?("outputs/scanners/joomscan")
+    FileUtils.mkdir_p("outputs/scanners/joomscan")
+  end
+  if !Dir.exists?("outputs/scanners/plown")
+    FileUtils.mkdir_p("outputs/scanners/plown")
+  end
+  if !Dir.exists?("outputs/scanners/wpscan")
+    FileUtils.mkdir_p("outputs/scanners/wpscan")
+  end
+  if !Dir.exists?("outputs/visited/")
+    FileUtils.mkdir_p("outputs/visited/")
+  end
+  if !Dir.exists?("dictionaries")
+    FileUtils.mkdir_p("dictionaries")
   end
 end
 
 ##########################
 
 def printBanner()
-  unicorn = %q{
-                ,%%%,
-               ,%%%` %==--
-              ,%%`( '|         ,    ,
-             ,%%@ /\_/        (\___/)
-   ,%.-"""--%%% "@@__         (_oo_)
-  %%/             |__`\         (O)
- .%'\     |   \   /  //       __||__    \)
- ,%' >   .'----\ |  [/     []/______\[] /
-    < <<`       ||         / \______/ \/
-     `\\\        ||        /    /__\
-       )\\       )\\       (\   /____\
-^^^^^^^"""^^^^^^""^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  bender = %q{
+          _
+         ( )
+          H
+          H
+         _H_           _____________________________________
+      .-'-.-'-.       /                                     \
+     /         \      |         ROBOTS RIDER v0.3           |        
+    |           |     |      Author: Felipe Molina          |
+    |   .-------'._   |       Twitter: @felmoltor           |
+    |  / /  '.' '. \  |                                     |   
+    |  \ \ @   @ / /  | robots.txt and CMS explorer program |
+    |   '---------'   / ___________________________________/  
+    |    _______|    / /
+    |  .'-+-+-+|    /_/
+    |  '.-+-+-+|         
+    |    """""" |
+    '-.__   __.-'
+         """  
 }
-  puts " ***************************************".cyan
-  puts " *          ROBOTS RIDER v#{$SCRIPT_VERSION}          *".cyan
-  puts " *        Author: Felipe Molina        *".cyan
-  puts " *         Twitter: @felmoltor         *".cyan
-  puts " *                                     *".cyan
-  puts " *    'robots.txt' explorer program    *".cyan
-  puts " ***************************************".cyan
-  puts unicorn.cyan
+  puts bender.cyan
 end
 
 ##########################
@@ -120,4 +134,3 @@ robotsrider = RobotsRider.new(op)
 # If the user specified a domain, the URLs to explore will be found in the output of the harvester
 summary = robotsrider.rideRobots
 robotsrider.saveReport
-robotsrider.cleanTheHouse
