@@ -100,7 +100,11 @@ class RobotsRider
         @juicytitles << jtitle.upcase.gsub(/\s+/," ").strip if jtitle.strip[0] != "#"
       }
     end
-    
+  end
+  
+  #############
+  
+  def setSubdomainsAsTargets()
     # Initialize the URL file if there was a domain specified and the user has 
     # theHarvester in hist PATH.
     if !@domain.nil?
@@ -109,7 +113,6 @@ class RobotsRider
         @urlfile = newurlfile
       end
     end
-    # @stats = {}
   end
   
   #############
@@ -514,7 +517,6 @@ class RobotsRider
       # Create an URL file with the outuput of the harvester for hosts
       # Retrieve the host found in the domain provided by the user
       cmdline = "#{thbin} -f #{thtmpfile} -d #{@domain} -b all "
-      puts "Searching with 'theharvester' information about the domain '#{@domain}'. Please, be patient."
       @log.info "Searching with 'theharvester' information about the domain #{@domain}"
       @log.debug " #{cmdline}"
       salida = %x(#{cmdline} > #{cmdoutput})

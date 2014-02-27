@@ -96,6 +96,34 @@ def initializeFolders()
   end
 end
 
+def printToolStatus(tools)  
+  toolsOk = true
+  tools.each {|tool,values|
+    if values["path"] == "<AUTODISCOVER>"
+      puts "Scanner file #{tool}:"
+      print " - Present: "
+      puts "#{values["path"]}".yellow
+      print " - Readable: "
+      puts "n/a".yellow
+      print " - Executable: "
+      puts "n/a".yellow
+    else
+      puts "Scanner file #{tool}:"
+      print " - Present: "
+      puts "Yes (#{values['path']})".green if values["present"]
+      puts "No (#{values['path']})".red if !values["present"]
+      print " - Readable: "
+      puts "Yes".green if values["readable"]
+      puts "No".red if !values["readable"]
+      print " - Executable: "
+      puts "Yes".green if values["executable"]
+      puts "No".red if !values["executable"]
+      toolsOk = false if values["error"]  
+    end
+  }
+  return toolsOk
+end
+
 ##########################
 
 def printBanner()
@@ -137,47 +165,28 @@ scanners = {}
 # Check for third party scanners
 puts "Checking if the third party scanners are presents in your system..."
 scanners,tools = robotsrider.getThirdPartyStatus()
-scannersOk = true
-toolsOk = true
-
-scanners.each {|scanner,values|
-  puts "Scanner file #{scanner}:"
-  print " - Present: "
-  puts "Yes (#{values['path']})".green if values["present"]
-  puts "No (#{values['path']})".red if !values["present"]
-  print " - Readable: "
-  puts "Yes".green if values["readable"]
-  puts "No".red if !values["readable"]
-  print " - Executable: "
-  puts "Yes".green if values["executable"]
-  puts "No".red if !values["executable"]
-  scannersOk = false if values["error"]  
-}
-if !scannersOk
-  $stderr.puts "There was an error with your scanners configuarion. Please fix it and try again."
+puts
+puts "********************"
+puts "* Scanners Status: *"
+puts "********************"
+scannersOk = printToolStatus(scanners)
+puts
+puts "*****************"
+puts "* Tools Status: *"
+puts "*****************"
+toolsOk = printToolStatus(tools)
+if !scannersOk or !toolsOk
+  $stderr.puts "There was an error with your tools configuration. Please fix it and try again."
   exit(1)
 end
-
-tools.each {|tool,values|
-  puts "Scanner file #{tool}:"
-  print " - Present: "
-  puts "Yes (#{values['path']})".green if values["present"]
-  puts "No (#{values['path']})".red if !values["present"]
-  print " - Readable: "
-  puts "Yes".green if values["readable"]
-  puts "No".red if !values["readable"]
-  print " - Executable: "
-  puts "Yes".green if values["executable"]
-  puts "No".red if !values["executable"]
-  scannersOk = false if values["error"]  
-}
-if !scannersOk
-  $stderr.puts "There was an error with your scanners configuarion. Please fix it and try again."
-  exit(1)
-end
-
-exit(2)
 
 # If the user specified a domain, the URLs to explore will be found in the output of the harvester
+# Set the targets as the output of The Harvester
+if !op[:domain].nil?
+  puts
+  puts "Setting the URL targets from the output of The Harvester. Please be patient..."
+  robotsrider.setSubdomainsAsTargets()
+end
+
 summary = robotsrider.rideRobots
 robotsrider.saveReport  
