@@ -162,7 +162,7 @@ class RobotsRider
     puts "Launching DPScan. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
     dpoutput = %x(python #{dpscancmd} > #{outfile})
         @log.info("Exit status of the scan #{$?.exitstatus}")
-    if $?.exitstatus != 0
+    if $?.exitstatus != 0 or File.zero?(outfile)
       puts "There was an error doing this scan!".red
     end
   end
@@ -189,8 +189,9 @@ class RobotsRider
     @log.debug "Launching plown: #{plowncmd}"
     puts "Launching Plown. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
     plownout = %x(#{plowncmd} > #{outfile})
-        @log.info("Exit status of the scan #{$?.exitstatus}")
-    if $?.exitstatus != 0
+    
+    @log.info("Exit status of the scan #{$?.exitstatus}")
+    if $?.exitstatus != 0 or File.zero?(outfile)
       puts "There was an error doing this scan!".red
     end
   end
@@ -230,7 +231,7 @@ class RobotsRider
     puts "Launching WPScan. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
     wpoutput = %x(#{wpscancmd} > #{outfile})
     @log.info("Exit status of the scan #{$?.exitstatus}")
-    if $?.exitstatus != 0
+    if $?.exitstatus != 0 or File.zero?(outfile)
       puts "There was an error doing this scan!".red
     end
   end
@@ -269,8 +270,9 @@ class RobotsRider
     @log.debug "Launching Joomscan: #{jscancmd}"
     puts "Launching Joomscan. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
     joutput = %x(#{jscancmd} > #{outfile})
-        @log.info("Exit status of the scan #{$?.exitstatus}")
-    if $?.exitstatus != 0
+    
+    @log.info("Exit status of the scan #{$?.exitstatus}")
+    if $?.exitstatus != 0 or File.zero?(outfile)
       puts "There was an error doing this scan!".red
     end
   end
@@ -324,7 +326,7 @@ class RobotsRider
   ##########################
   
   def getWPScanPath()
-    # Check if wfuzz is in the path
+    # Check if wpscan is in the path
     whereisoutput = `whereis wpscan`
     thpaths = whereisoutput.split(":")[1]
     thpaths.split(" ").each {|path|
@@ -338,7 +340,7 @@ class RobotsRider
   ##########################
   
   def getJoomscanPath()
-    # Check if wfuzz is in the path
+    # Check if Joomscan is in the path
     whereisoutput = `whereis joomscan`
     thpaths = whereisoutput.split(":")[1]
     thpaths.split(" ").each {|path|
@@ -352,7 +354,7 @@ class RobotsRider
   ##########################
   
   def getDPScanPath()
-    # Check if wfuzz is in the path
+    # Check if dpscan is in the path
     whereisoutput = `whereis DPScan`
     thpaths = whereisoutput.split(":")[1]
     thpaths.split(" ").each {|path|
@@ -553,28 +555,40 @@ class RobotsRider
     wfuzzcmd = "#{wfbin} -o html -t $threads$ -s $delay$ --hc $ignorec$ -z file,$dict$ #{clean_disentry.gsub("*","FUZZ")} 2> #{disentry_output}"
     fuzzdict = {}
     
-    if File.exists?("config/wfuzz.cfg")
-      wf = File.open("config/wfuzz.cfg","r")
-      wf.each {|wline|
-        # Ignoring comentaries
-        if wline.strip[0] != "#"
-          key,val = wline.split(":")
-          key.strip!
-          val.strip!
-          
-          case key.upcase
-            when "DICTIONARY" then wfuzzcmd.gsub!("$dict$",val)
-            when "THREADS" then wfuzzcmd.gsub!("$threads$",val)
-            when "DELAY" then wfuzzcmd.gsub!("$delay$",val)
-            when "IGNORE" then wfuzzcmd.gsub!("$ignorec$",val)
-          end
-        end
-      }
+
+    if File.exists?("config/tools/wfuzz.cfg")
+      # Fill in the blanks
+      wfuzzh = eval(File.open("config/tools/wfuzz.cfg","r").read)
+      if !wfuzzh["dictionary"].nil?
+        wfuzzcmd.gsub!("$dict$",wfuzzh["dictionary"])      
+      else
+        wfuzzcmd.gsub!("$dict$",defaultdic)        
+      end
+      
+      if !wfuzzh["ignore"].nil?
+        wfuzzcmd.gsub!("$ignorec$",wfuzzh["ignore"])      
+      else
+        wfuzzcmd.gsub!("$ignorec$",defaulignore)        
+      end
+      
+      if !wfuzzh["ignore"].nil?
+        wfuzzcmd.gsub!("$ignorec$",wfuzzh["ignore"])      
+      else
+        wfuzzcmd.gsub!("$ignorec$",defaultdic)        
+      end
+      
+      if !wfuzzh["ignore"].nil?
+        wfuzzcmd.gsub!("$ignorec$",wfuzzh["ignore"])      
+      else
+        wfuzzcmd.gsub!("$ignorec$",defaultdic)        
+      end
+=begin
       # Set the default values if there is some option no specified by the user
       wfuzzcmd.gsub!("$dict$",defaultdic) if wfuzzcmd.include?("$dict$")
       wfuzzcmd.gsub!("$threads$",defaultdic) if wfuzzcmd.include?("$threads$")
       wfuzzcmd.gsub!("$delay$",defaultdic) if wfuzzcmd.include?("$delay$")
       wfuzzcmd.gsub!("$ignorec$",defaultdic) if wfuzzcmd.include?("$ignorec$")
+=end
       
       @log.debug "Executing the following command #{wfuzzcmd}"
       # puts "Executing the following command #{wfuzzcmd}. Be patient"
@@ -909,7 +923,102 @@ class RobotsRider
     cmssimilarity = cmssimilarity.sort_by{|key,value| value}.reverse
     return cmssimilarity
   end
+  
+  ##########################
+
+  def getThirdPartyStatus()
+    # This method checks for presence of the scanners in your system
+    # Open all files hanging from 'config/scanners'
+    # For each file search for "path" and check if the path is pressent in this system
+    scanners = {}
+    tools = {}
+    if Dir.exists?("config/scanners")
+      Dir.entries("config/scanners").each {|entry|
+        if /.*\.cfg$/.match(entry)
+          scanners[entry] = {}
+          # Explore this config file
+          cfg = eval(File.open("config/scanners/#{entry}").read)
+          # Check if the executable exists
+          if !cfg["path"].nil?
+            scanners[entry]["path"] = cfg["path"]
+            scanners[entry]["autodiscover"] = false
+            scanners[entry]["error"] = false
+            
+            if File.exists?(cfg["path"])
+              scanners[entry]["present"] = true           
+            else
+              scanners[entry]["present"] = false
+              scanners[entry]["error"] = true
+            end
+            # Check for its permissions
+            if !File.readable?(cfg["path"])
+                scanners[entry]["readable"] = false
+                scanners[entry]["error"] = true             
+            else
+                scanners[entry]["readable"] = true            
+            end
+            if !File.executable?(cfg["path"])
+                scanners[entry]["executable"] = false
+                scanners[entry]["error"] = true  
+            else
+                scanners[entry]["executable"] = true            
+            end
+          else
+            # This tool should be autodiscovered
+            scanners[entry]["path"] = "<AUTODISCOVER>"
+            scanners[entry]["autodiscover"] = true
+            scanners[entry]["executable"] = nil
+            scanners[entry]["readable"] = nil
+          end
+        end
+      }
+    end
     
+    if Dir.exists?("config/tools")
+      Dir.entries("config/tools").each {|entry|
+        if /.*\.cfg$/.match(entry)
+          tools[entry] = {}
+          # Explore this config file
+          cfg = eval(File.open("config/tools/#{entry}").read)
+          # Check if the executable exists
+          if !cfg["path"].nil?
+            tools[entry]["path"] = cfg["path"]
+            tools[entry]["autodiscover"] = false
+            tools[entry]["error"] = false
+            
+            if File.exists?(cfg["path"])
+              tools[entry]["present"] = true           
+            else
+              tools[entry]["present"] = false
+              tools[entry]["error"] = true
+            end
+            # Check for its permissions
+            if !File.readable?(cfg["path"])
+                tools[entry]["readable"] = false
+                tools[entry]["error"] = true             
+            else
+                tools[entry]["readable"] = true            
+            end
+            if !File.executable?(cfg["path"])
+                tools[entry]["executable"] = false
+                tools[entry]["error"] = true  
+            else
+                tools[entry]["executable"] = true            
+            end
+          else
+            # This tool should be autodiscovered
+            tools[entry]["path"] = "<AUTODISCOVER>"
+            tools[entry]["autodiscover"] = true
+            tools[entry]["executable"] = nil
+            tools[entry]["readable"] = nil
+          end
+        end
+      }
+    end
+    
+    return scanners, tools
+  end
+  
   ##########################
 
   def saveReport()
