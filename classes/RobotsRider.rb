@@ -6,6 +6,7 @@ require 'colorize'
 require 'nokogiri'
 require 'open-uri'
 require 'fileutils'
+require_relative 'RobotsWeb'
 
 # TODO: Save in summary the results in HTML or XML
 # TODO: Optionaly bruteforce with wfuzz authentication to pages found with '403 Forbidden' code
@@ -14,14 +15,21 @@ require 'fileutils'
 
 class RobotsRider
   
+  attr_accessor :robotswebs
+  
   def initialize(options)
     @@CMSCONFIDENCE = 0.6
+    @robotswebs = []
+    # Read Scanner configurations:
     @wpscanconfig = readWPScanConfig()
     @joomscanconfig = readJoomscanConfig()
     @plownconfig = readPlownConfig()
     @dpscanconfig = readDPScanConfig()
+    # Read Tools Configurations:
+    @wfuzzconfig = readWfuzzConfig()
+    @harvesterconfig = readTheHarvesterConfig()
     
-    # Get executable path if not defined in the config files
+    # Autodiscover scanners path if not defined in the config files
     if !@wpscanconfig["path"].nil? and @wpscanconfig["path"].size > 0 and File.exists?(@wpscanconfig["path"])
       @wpscanpath = @wpscanconfig["path"]
     else
@@ -42,23 +50,28 @@ class RobotsRider
     else
       @dpscanpath = getDPScanPath()
     end
+    # Autodiscover tools path if not defined in the config files
+    if !@wfuzzconfig["path"].nil? and @wfuzzconfig["path"].size > 0 and File.exists?(@wfuzzconfig["path"])
+      @wfuzzpath = @wfuzzconfig["path"]
+    else
+      @wfuzzpath = getWfuzzPath()
+    end
+    if !@harvesterconfig["path"].nil? and @harvesterconfig["path"].size > 0 and File.exists?(@harvesterconfig["path"])
+      @harvesterpath = @harvesterconfig["path"]
+    else
+      @harvesterpath = getTheHarvesterPath()
+    end
     
     @urlfile = options[:urlfile]
     @domain = options[:domain]
     if !@domain.nil?
       @domain = @domain.gsub("http://","").gsub("https://","").gsub("www.","")
     end
-    @fuzz = options[:fuzz]
+    @fuzz_urls = options[:fuzz]
     @visit = options[:visit]
     @follow = options[:follow]
     @outputfile = options[:outputfile]
     @log = Logger.new("logs/#{Time.now.strftime('%Y%m%d_%H%M%S')}_robotsrider.log")
-    
-    if (!options[:urlfile].nil? and File.exists?(options[:urlfile]))
-      @randomsearch = false 
-    else
-      @randomsearch = true
-    end
     
     if !options[:loglevel].nil?
       if options[:loglevel] = "DEBUG"
@@ -117,17 +130,6 @@ class RobotsRider
   
   #############
   
-  def hasJuicyFiles(path)
-    @juicypaths.each {|jpath|
-      if !path.upcase.match(jpath).nil?
-        return true 
-      end
-    }
-    return false
-  end
-  
-  #############
-  
   def readWPScanConfig()
     eval(File.open("config/scanners/wpscan.cfg","r").read)
   end
@@ -143,10 +145,23 @@ class RobotsRider
   def readPlownConfig()
     eval(File.open("config/scanners/plown.cfg","r").read)
   end
+  
   #############
   
   def readDPScanConfig()
     eval(File.open("config/scanners/dpscan.cfg","r").read)
+  end
+  
+  #############
+  
+  def readWfuzzConfig()
+    eval(File.open("config/tools/wfuzz.cfg","r").read)
+  end
+  
+  #############
+  
+  def readTheHarvesterConfig()
+    eval(File.open("config/tools/theharvester.cfg","r").read)
   end
   
   #############
@@ -282,7 +297,18 @@ class RobotsRider
   
   #############
   
-  def hasJuicyTitle(htmlcode)
+  def hasJuicyUrl?(path)
+    @juicypaths.each {|jpath|
+      if !path.upcase.match(jpath).nil?
+        return true 
+      end
+    }
+    return false
+  end
+  
+  #############
+  
+  def hasJuicyTitle?(htmlcode)
     html_doc = Nokogiri::HTML(htmlcode)
     pagetitle = html_doc.css('title').text.upcase.gsub(/\s+/," ")
     
@@ -296,7 +322,7 @@ class RobotsRider
   
   #############
   
-  def hasJuicyWords(htmlcode)
+  def hasJuicyWords?(htmlcode)
     # Normalize html code
     normalizedhtml = htmlcode.upcase.gsub(/\s+/," ")
     jphrases = {}
@@ -511,12 +537,12 @@ class RobotsRider
     resultfile = "/tmp/harvester_output_#{@domain.gsub(/[\/|:]/,"_")}.list"
     cmdoutput = "/tmp/harvester_output_#{@domain.gsub(/[\/|:]/,"_")}.out"
     thtmpfile = "/tmp/#{@domain.gsub(/[\/|:]/,"_")}.html"
-    thbin = getTheHarvesterPath()
+    # thbin = getTheHarvesterPath()
     
-    if !thbin.nil?
+    if !@harvesterpath.nil?
       # Create an URL file with the outuput of the harvester for hosts
       # Retrieve the host found in the domain provided by the user
-      cmdline = "#{thbin} -f #{thtmpfile} -d #{@domain} -b all "
+      cmdline = "#{@harvesterpath} -f #{thtmpfile} -d #{@domain} -b all "
       @log.info "Searching with 'theharvester' information about the domain #{@domain}"
       @log.debug " #{cmdline}"
       salida = %x(#{cmdline} > #{cmdoutput})
@@ -547,14 +573,13 @@ class RobotsRider
   
   def fuzzDisalowedEntry(disentry)
     
-    wfbin = getWfuzzPath 
     defaultdic = "/usr/share/wfuzz/wordlist/general/common.txt"
     defaultdelay = 0.3
     defaultthreads =  10
     defaultignorec = "404,400"
     clean_disentry = disentry.gsub("$","")
     disentry_output = "/tmp/#{clean_disentry.gsub("/","_").gsub(":","").gsub("*","FUZZ")}.html"
-    wfuzzcmd = "#{wfbin} -o html -t $threads$ -s $delay$ --hc $ignorec$ -z file,$dict$ #{clean_disentry.gsub("*","FUZZ")} 2> #{disentry_output}"
+    wfuzzcmd = "#{@wfuzzpath} -o html -t $threads$ -s $delay$ --hc $ignorec$ -z file,$dict$ #{clean_disentry.gsub("*","FUZZ")} 2> #{disentry_output}"
     fuzzdict = {}
     
 
@@ -584,13 +609,6 @@ class RobotsRider
       else
         wfuzzcmd.gsub!("$ignorec$",defaultdic)        
       end
-=begin
-      # Set the default values if there is some option no specified by the user
-      wfuzzcmd.gsub!("$dict$",defaultdic) if wfuzzcmd.include?("$dict$")
-      wfuzzcmd.gsub!("$threads$",defaultdic) if wfuzzcmd.include?("$threads$")
-      wfuzzcmd.gsub!("$delay$",defaultdic) if wfuzzcmd.include?("$delay$")
-      wfuzzcmd.gsub!("$ignorec$",defaultdic) if wfuzzcmd.include?("$ignorec$")
-=end
       
       @log.debug "Executing the following command #{wfuzzcmd}"
       # puts "Executing the following command #{wfuzzcmd}. Be patient"
@@ -701,10 +719,42 @@ class RobotsRider
     end
   end
   
+  # Not a very acurate way of detect name and version of a CMS...
+  def getNameAndVersionFromString(cmsstr)
+    name = version = nil
+    # Words followed by a string with numbers and points 
+    m = /([^\d]+)\s+(\d+(\.\d+)*)\s*.*/.match(cmsstr)
+    if !m.nil?
+      name = m[1]
+      version = m[2]
+    end
+    return name,version
+  end
+  
+  #############
+  
+  def releaseTheDogs()
+    # This method launch the CMS scanners to all the identified CMS sites
+    # webs Is an array of Webs objects to iterate 
+    @robotswebs.each {|rweb|
+      puts "URL: #{rweb.url}"    
+      puts "CMS Name: #{rweb.cms[:name]}"
+      puts "CMS Version: #{rweb.cms[:version]}"
+      rweb.disalowed.each{|disurl,vals|
+        puts disurl
+        puts " -> Response: #{vals[:response]}"
+        puts " -> Interesting Title?: #{vals[:interestingparts][:title]}"
+        puts " -> Interesting URL?: #{vals[:interestingparts][:url]}"
+        puts " -> Interesting Body?: #{vals[:interestingparts][:body]}"
+      }
+    }
+    
+  end
+  
   #############
   
   def rideRobots()
-    # Create folder for visited in this execution
+    # Create folder for visited in this execution"
     visiteddir = "outputs/visited/#{Time.now.strftime('%Y%m%d_%H%M%S')}/"
     if @visit
       Dir.mkdir(visiteddir)
@@ -712,6 +762,7 @@ class RobotsRider
     # Read the file with URLs
     urlf = File.open(@urlfile,"r")
     urlf.each {|url|
+      rweb = RobotsWeb.new(url)
       cmsname = ""
       url.strip!
       if url.index("http://").nil? and url.index("https://").nil?
@@ -728,6 +779,8 @@ class RobotsRider
         rootbody = uri.read 
         generator = findCMSByGeneratorTag(rootbody)
         poweredby = findCMSByPoweredByText(rootbody)
+        rweb.generators << generator
+        rweb.poweredby << poweredby
         if !generator.nil?
           if generator.size > 0
             @log.debug "Found generator #{generator}..."
@@ -749,8 +802,10 @@ class RobotsRider
         puts
         puts "Searching for robots.txt file..."
         robotsurl = "#{uri.scheme}://#{uri.host}/robots.txt"
+        rweb.robots[:url] = robotsurl
         # TODO: Change timeout for the HTTP connexion (https://stackoverflow.com/questions/13074779/ruby-nethttp-idle-timeout)
         robots_response = fetch(robotsurl)
+        rweb.robots[:response] = robots_response.code.to_i
         if robots_response.code.to_i == 200
           @log.info("It seems #{robotsurl} is accesible (#{robots_response.code}).")
           print "[FOUND] (#{robots_response.code}): ".green
@@ -786,8 +841,8 @@ class RobotsRider
                     end
                     
                     disurl = "#{uri.scheme}://#{uri.host}/#{prohibido}"
-                    @log.info "Found '#{disurl}' as a disallowed entry."
-                    # print "Found '#{disurl}' as a disallowed entry "                    
+                    @log.info "Found '#{disurl}' as a disallowed entry."  
+                    rweb_dentry = rweb.addDisallowedEntry(disurl)                
                       
                     if @visit
                       # If disallowed entry has wildcards, skip it from visiting
@@ -795,39 +850,52 @@ class RobotsRider
                         savefile = "#{visiteddir}#{disurl.gsub("/","_").gsub(":","_")}"
                         @log.info("Visiting #{disurl} and saving in file #{savefile}")
                         dis_response = fetch(disurl)
+                        rweb_dentry[:response] = dis_response.code.to_i
+                        # Check if is a Juicy URL
+                        interestingparts={:body=>nil,:url=>nil,:title=>nil}
                         if dis_response.code.to_i == 200
                           # Search for juicy words in the url
                           @log.info "URL '#{disurl}' exists."
                           print "[FOUND] (#{dis_response.code}): ".green
                           puts "#{disurl}"
-                          if hasJuicyFiles(prohibido)
+                          # Is this URL interesting?
+                          if hasJuicyUrl?(prohibido)
                             @log.info "URL '#{disurl}' exists. (And it seems interesting)"
-                            # puts " It seems interesting in the Path!".red
                             puts " |-> [INTERESTING PATH]".red
                           end
-                          if !(jw = hasJuicyWords(dis_response.body)).nil?
+                          # Is the body interesting?
+                          if !(jw = hasJuicyWords?(dis_response.body)).nil?
                             @log.info "URL '#{disurl}' exists. (And it seems interesting in his body)"
-                            # puts " It seems interesting in his body content! (Words found: #{jw})".red
                             jw.each{ |k,v|
-                              puts " |-> [INTERESTING TEXT]: '#{v}'"                              
+                              puts " |-> [INTERESTING TEXT]: '#{v}'"                          
                             }
+                            interestingparts[:body] = true    
                           end
-                          if hasJuicyTitle(dis_response.body)
+                          # Is the title interesting?
+                          if hasJuicyTitle?(dis_response.body)
                             @log.info "URL '#{disurl}' exists. (And it seems interesting in his Title)"
                             # puts " It seems interesting in his page Title!".red
                             puts " |-> [INTERESTING TITLE]".red
+                            interestingparts[:title] = true  
                           end
+                          rweb_dentry[:interestingparts] = interestingparts
                           sf = File.open(savefile,"w")
                           sf.write(dis_response.body)
                           sf.close
                         else
                           @log.debug "URL '#{disurl}' is not accessible. (#{dis_response.code})"
-                          print "[NOT FOUND] (#{dis_response.code}): ".light_red
+                          print "[NOT ACCESSIBLE] (#{dis_response.code}): ".light_red
                           puts "#{disurl}"
+                          # Is this URL interesting?
+                          if hasJuicyUrl?(prohibido)
+                            @log.info "URL '#{disurl}' is not accessible. (But it seems interesting)"
+                            puts " |-> [INTERESTING PATH]".red
+                            interestingparts[:url] = true
+                          end
                         end
                       else
                         # TODO: Support more than one wildcard in the URL
-                        if @fuzz and !getWfuzzPath.nil?
+                        if @fuzz_urls and !@wfuzzpath.nil?
                           if disurl.count("*") == 1
                             @log.info("Widlcard found. Fuzzing with 'wfuzz'")
                             puts "Widlcard found in #{disurl}. Fuzzing it!"
@@ -848,11 +916,9 @@ class RobotsRider
                             end
                           else
                             @log.info("Disallowed entry '#{disurl}' has more than one wildcard '*'. Not fuzzing.")
-                            # puts "Disallowed entry '#{disurl}' has more than one wildcard '*'. Not fuzzing."
                           end 
                         else
                           @log.info("Disallowed entry has wildcards '*'. Not visiting.")
-                          # puts "Disallowed entry '#{disurl}' has wildcards '*'. Not visiting."
                         end
                       end
                     end
@@ -871,12 +937,14 @@ class RobotsRider
           puts "#{robotsurl}"
         end
         # Launch vulnerability scan for detected CMS
+=begin
         if cmsname.size > 0
           launchCMSScans(cmsname,uri)
         else
           @log.info("No CMS was detected form #{uri}. Skipping vulnerability scan.")
           puts "No CMS was detected form #{uri}. Skipping vulnerability scan.".red
         end
+=end
       rescue URI::BadURIError, URI::InvalidURIError => e
         @log.error("The specified URL #{url} is not valid. Ignoring...")
         @log.error("Error: #{e.message}") 
@@ -892,6 +960,13 @@ class RobotsRider
       rescue Exception => e
         @log.error("Error on connexion: #{e.message}")  
       end  
+      
+      rweb.cms[:name],rweb.cms[:version] = getNameAndVersionFromString(cmsname)
+      # Save possible CMS 
+      @log.info("Obtained CMS Name and version: #{rweb.cms[:name]}, #{rweb.cms[:version]}")
+      puts "Obtained CMS Name and version: #{rweb.cms[:name]} #{rweb.cms[:version]}"
+      # Append this robot web information
+      @robotswebs << rweb
     }
     urlf.close
   end
@@ -1019,15 +1094,6 @@ class RobotsRider
     end
     
     return scanners, tools
-  end
-  
-  ##########################
-
-  def saveReport()
-    # STUB: Save output in a beautiful HTML or XML
-    if !@outputfile.nil?
-      puts "STUB: Saving summary to #{@outputfile}"
-    end
   end
   
   ##########################

@@ -8,7 +8,6 @@ require 'fileutils'
 require 'pp'
 
 # TODO: Save in summary the results in HTML or XML
-# TODO: Add queries to archive.org API to retrieve cached entries of webpages
 
 $SCRIPT_VERSION = "0.3"
 
@@ -21,6 +20,7 @@ def parseOptions()
     :visit => true, 
     :follow => false, 
     :fuzz => false,
+    :vulnscan => false,
     :outputfile => nil, 
     :loglevel => "DEBUG"
   }
@@ -42,6 +42,9 @@ def parseOptions()
     end
     opts.on( '-w', '--[no-]wfuzz', "Use wfuzz program to fuzz wildcards in the disallowed entries [Default: False]" ) do |fuzz|
       options[:fuzz] = fuzz
+    end
+    opts.on( '-s', '--[no-]scan-vulns', "Use vulnerability scanners to scan detected CMS sites [Default: False]" ) do |vulnscan|
+      options[:vulnscan] = vulnscan
     end
     opts.on( '-o', '--output [OFILE]', 'TODO: Save the summary of the execution to this beautiful HTML file' ) do |ofile|
       options[:outputfile] = ofile
@@ -65,6 +68,17 @@ def parseOptions()
   end
   
   return options
+end
+
+
+##########################
+
+def saveReport(ofile)
+  # STUB: Save output in a beautiful HTML or XML
+  if !@outputfile.nil?
+    puts "STUB: Saving summary to #{@outputfile}"
+  end
+  return false
 end
 
 ##########################
@@ -96,32 +110,52 @@ def initializeFolders()
   end
 end
 
+##########################
+
 def printToolStatus(tools)  
   toolsOk = true
   tools.each {|tool,values|
     if values["path"] == "<AUTODISCOVER>"
-      puts "Scanner file #{tool}:"
-      print " - Present: "
-      puts "#{values["path"]}".yellow
-      print " - Readable: "
-      puts "n/a".yellow
-      print " - Executable: "
+      puts "Scanner file '#{tool}':"
+      print " Is present? "
+      print "#{values["path"]},".yellow
+      print " Is readable? "
+      print "n/a,".yellow
+      print " Is executable? "
       puts "n/a".yellow
     else
-      puts "Scanner file #{tool}:"
-      print " - Present: "
-      puts "Yes (#{values['path']})".green if values["present"]
-      puts "No (#{values['path']})".red if !values["present"]
-      print " - Readable: "
-      puts "Yes".green if values["readable"]
-      puts "No".red if !values["readable"]
-      print " - Executable: "
+      puts "Scanner file '#{tool}':"
+      print " Is present? "
+      print "Yes (#{values['path']}),".green if values["present"]
+      print "No (#{values['path']}),".red if !values["present"]
+      print " Is readable? "
+      print "Yes,".green if values["readable"]
+      print "No,".red if !values["readable"]
+      print " Is executable? "
       puts "Yes".green if values["executable"]
       puts "No".red if !values["executable"]
       toolsOk = false if values["error"]  
     end
   }
   return toolsOk
+end
+
+##########################
+
+def printDogs()
+  dogs = %q{
+    .         |\      ___________________
+     \`-. _.._| \    /                   \
+      |_,'  __`. \   | Scanning for CMS  |
+      (.\ _/.| _  |  |  Vulnerabilities  |
+     ,'      __ \ |  / __________________/
+   ,'     __/||\  | /_/
+  (_)   ,/|||||/  |
+     `-'_----    /
+        /`-._.-'/
+        `-.__.-' 
+}
+  puts dogs.cyan
 end
 
 ##########################
@@ -134,7 +168,7 @@ def printBanner()
           H
          _H_           _____________________________________
       .-'-.-'-.       /                                     \
-     /         \      |         ROBOTS RIDER v0.3           |        
+     /         \      |         ROBOTS RIDER v0.4           |        
     |           |     |      Author: Felipe Molina          |
     |   .-------'._   |       Twitter: @felmoltor           |
     |  / /  '.' '. \  |                                     |   
@@ -179,14 +213,28 @@ if !scannersOk or !toolsOk
   $stderr.puts "There was an error with your tools configuration. Please fix it and try again."
   exit(1)
 end
-
 # If the user specified a domain, the URLs to explore will be found in the output of the harvester
 # Set the targets as the output of The Harvester
 if !op[:domain].nil?
   puts
   puts "Setting the URL targets from the output of The Harvester. Please be patient..."
   robotsrider.setSubdomainsAsTargets()
+else
+  puts "Setting the URL targets from the file #{op[:urlfile]}."
 end
 
-summary = robotsrider.rideRobots
-robotsrider.saveReport  
+robotsrider.rideRobots # Just obtain information about the installed CMS and interesting routes
+puts "Identification phase finished."
+
+if !op[:vulnscan]
+  puts "You don't want to scan for vulnerabilities so we won't release the dogs."  
+else
+  puts
+  puts "Releasing the dogs!"
+  printDogs
+  vulnSummary = robotsrider.releaseTheDogs
+end
+
+if (!op[:outputfile].nil? and !saveReport(op[:outputfile]))
+  $stderr.puts "Ups! There was an error saving the results in '#{op[:outputfile]}'. Please, check your permissions or something..."
+end  
