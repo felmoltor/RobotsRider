@@ -1,0 +1,40 @@
+abcc
+
+ ..|''||   '|| '||'  '|'     |      .|'''.|  '||''|.  
+.|'    ||   '|. '|.  .'     |||     ||..  '   ||   || 
+||      ||   ||  ||  |     |  ||     ''|||.   ||...|' 
+'|.     ||    ||| |||     .''''|.  .     '||  ||      
+ ''|...|'      |   |     .|.  .||. |'....|'  .||.     
+    
+ 
+=================================================================
+OWASP Joomla! Vulnerability Scanner v0.0.5  
+(c) Aung Khant, aungkhant]at[yehg.net
+YGN Ethical Hacker Group, Myanmar, http://yehg.net/lab
+Update by: Web-Center, http://web-center.si (2011)
+=================================================================
+
+
+Vulnerability Entries: 611
+Last update: February 2, 2012
+
+Use "update" option to update the database
+Use "check" option to check the scanner update
+Use "download" option to download the scanner latest version package
+Use svn co to update the scanner and the database
+svn co https://joomscan.svn.sourceforge.net/svnroot/joomscan joomscan 
+
+
+Target: http://www.mat.ucm.es
+
+Server: Apache/2.2.11 (Ubuntu) PHP/5.2.6-3ubuntu4.6 with Suhosin-Patch mod_ssl/2.2.11 OpenSSL/0.9.8g
+X-Powered-By: PHP/5.2.6-3ubuntu4.6
+
+
+## Checking if the target has deployed an Anti-Scanner measure
+
+[!] Scanning Passed ..... OK 
+
+
+## Fingerprinting in progress ...
+

@@ -1,18 +1,18 @@
 
 class RobotsWeb
-  attr_accessor :url,:robots,:generators,:poweredby,:cms,:disalowed
+  attr_accessor :url,:robots,:generators,:poweredby,:cms,:disallowed
   
   def initialize(url=nil)
     @url = url
     @robots = {:url => nil, :response => nil}
     @generators = []
     @poweredby = []
-    @disalowed = {}
+    @disallowed = {}
     @cms = {:name => nil, :version => nil}
   end
   
   def addDisallowedEntry(url,response=nil,finalresponse=nil,interestingparts={:body=>nil,:url=>nil,:title=>nil})
-    @disalowed["#{url}"] = {
+    @disallowed["#{url}"] = {
       :response => response,
       :interestingparts => interestingparts
       }

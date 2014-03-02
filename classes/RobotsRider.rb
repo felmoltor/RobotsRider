@@ -6,7 +6,9 @@ require 'colorize'
 require 'nokogiri'
 require 'open-uri'
 require 'fileutils'
+require 'timeout'
 require_relative 'RobotsWeb'
+require 'pp'
 
 # TODO: Save in summary the results in HTML or XML
 # TODO: Optionaly bruteforce with wfuzz authentication to pages found with '403 Forbidden' code
@@ -15,10 +17,12 @@ require_relative 'RobotsWeb'
 
 class RobotsRider
   
-  attr_accessor :robotswebs
+  # attr_accessor :robotswebs
   
   def initialize(options)
     @@CMSCONFIDENCE = 0.6
+    @@CONNECTTIMEOUT= 15 
+    
     @robotswebs = []
     # Read Scanner configurations:
     @wpscanconfig = readWPScanConfig()
@@ -92,23 +96,23 @@ class RobotsRider
     end
     
     @juicypaths = []
-    if (File.exists?("config/juicypaths.list"))
-      jf = File.open("config/juicypaths.list","r")
+    if (File.exists?("config/juicytext/juicypaths.list"))
+      jf = File.open("config/juicytext/juicypaths.list","r")
       jf.each {|jline|
         @juicypaths << jline.upcase.strip
       }
     end
     @juicywords = []
-    if (File.exists?("config/juicybody.list"))
-      jw = File.open("config/juicybody.list","r")
+    if (File.exists?("config/juicytext/juicybody.list"))
+      jw = File.open("config/juicytext/juicybody.list","r")
       jw.each {|jline|
         @juicywords << jline.upcase.gsub(/\s+/," ").strip
       }
     end
     
     @juicytitles = []
-    if (File.exists?("config/juicytitles.list"))
-      jt = File.open("config/juicytitles.list","r")
+    if (File.exists?("config/juicytext/juicytitles.list"))
+      jt = File.open("config/juicytext/juicytitles.list","r")
       jt.each {|jtitle|
         @juicytitles << jtitle.upcase.gsub(/\s+/," ").strip if jtitle.strip[0] != "#"
       }
@@ -166,6 +170,16 @@ class RobotsRider
   
   #############
   
+  def printVulnScanOutput(outfile)
+    puts " > Scan resuls extracted from #{outfile}".on_blue
+    of = File.open(outfile,"r")
+    of.each{|line|
+      print " > #{line}".on_blue
+    }    
+  end
+  
+  #############
+  
   def launchDPScan(path)
     outfile = "#{File.expand_path(File.dirname(__FILE__))}/../outputs/scanners/dpscan/#{path.gsub(/(:|\/)/,"_")}.txt"
     # Launch wpscan
@@ -177,11 +191,14 @@ class RobotsRider
       dpscancmd += " #{@dpscanconfig['password']}"
     end
     @log.debug "Launching DPScan #{dpscancmd}"
-    puts "Launching DPScan. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
+    puts "Launching DPScan. This could take a while, please be patient..."
     dpoutput = %x(python #{dpscancmd} > #{outfile})
-        @log.info("Exit status of the scan #{$?.exitstatus}")
+    @log.info("Exit status of the scan #{$?.exitstatus}")
     if $?.exitstatus != 0 or File.zero?(outfile)
       puts "There was an error doing this scan!".red
+    else
+      # Output of the scan
+      printVulnScanOutput(outfile)
     end
   end
   
@@ -211,6 +228,9 @@ class RobotsRider
     @log.info("Exit status of the scan #{$?.exitstatus}")
     if $?.exitstatus != 0 or File.zero?(outfile)
       puts "There was an error doing this scan!".red
+    else
+      # Output of the scan
+      printVulnScanOutput(outfile)
     end
   end
   
@@ -251,6 +271,9 @@ class RobotsRider
     @log.info("Exit status of the scan #{$?.exitstatus}")
     if $?.exitstatus != 0 or File.zero?(outfile)
       puts "There was an error doing this scan!".red
+    else
+      # Output of the scan
+      printVulnScanOutput(outfile)
     end
   end
   
@@ -259,7 +282,7 @@ class RobotsRider
   def launchJoomscan(path)
     outfile = "#{File.expand_path(File.dirname(__FILE__))}/../outputs/scanners/joomscan/#{path.gsub(/(:|\/)/,"_")}.txt"
     # Launch joomscan
-    jscancmd = "#{@joomscanpath}"
+    jscancmd = "perl #{@joomscanpath}"
     if !@joomscanconfig["htmlout"].nil? and @joomscanconfig["htmlout"].to_i > 0
       jscancmd += " -oh" # #{File.expand_path(File.dirname(__FILE__))}/../outputs/scanners/joomscan/#{path.gsub(/(:|\/)/,'_')}.html"
     end
@@ -292,6 +315,9 @@ class RobotsRider
     @log.info("Exit status of the scan #{$?.exitstatus}")
     if $?.exitstatus != 0 or File.zero?(outfile)
       puts "There was an error doing this scan!".red
+    else
+      # Output of the scan
+      printVulnScanOutput(outfile)
     end
   end
   
@@ -299,7 +325,8 @@ class RobotsRider
   
   def hasJuicyUrl?(path)
     @juicypaths.each {|jpath|
-      if !path.upcase.match(jpath).nil?
+      jp = Regexp.escape(jpath)
+      if !path.upcase.match(jp).nil?
         return true 
       end
     }
@@ -311,9 +338,9 @@ class RobotsRider
   def hasJuicyTitle?(htmlcode)
     html_doc = Nokogiri::HTML(htmlcode)
     pagetitle = html_doc.css('title').text.upcase.gsub(/\s+/," ")
-    
     @juicytitles.each {|jtitle|
-      if pagetitle == jtitle
+      jt = Regex.escape(jtitle)
+      if !pagetitle.match(jt).nil? 
         return true
       end
     }
@@ -326,9 +353,6 @@ class RobotsRider
     # Normalize html code
     normalizedhtml = htmlcode.upcase.gsub(/\s+/," ")
     jphrases = {}
-    # pp @juicywords
-    #puts 
-    #puts normalizedhtml
     
     @juicywords.each {|jline|
       jphrases = {}
@@ -397,7 +421,7 @@ class RobotsRider
   ##########################
   
   def getPlownPath()
-    # Check if wfuzz is in the path
+    # Check if plown is in the path
     whereisoutput = `whereis plown`
     thpaths = whereisoutput.split(":")[1]
     thpaths.split(" ").each {|path|
@@ -570,12 +594,75 @@ class RobotsRider
   end
   
   #############
+   
+  # TODO: Support more than basic authentication
+  def fuzzForbiddenEntry(forbiddenentry)
+    
+    defaultuserdic = "/usr/share/wfuzz/wordlist/fuzzdb/wordlists-user-passwd/unix-os/unix_users.txt"
+    defaultpassdic = "/usr/share/wfuzz/wordlist/fuzzdb/wordlists-user-passwd/unix-os/unix_passwords.txt"
+    defaultdelay = "0.3"
+    defaultthreads =  "10"
+    defaultignorec = "404,400"
+    forbidden_output = "/tmp/#{forbiddenentry.gsub("/","_").gsub(":","")}_basic_auth_fuzz.txt"
+    wfuzzcmd = "#{@wfuzzpath} -t $threads$ -s $delay$ --hc $ignorec$ -z file,$userdict$ -z file,$passdict$ --basic FUZZ:FUZ2Z #{forbiddenentry} > #{forbidden_output}"
+    validcredentials = []
+    
+    if File.exists?("config/tools/wfuzz.cfg")
+      # Fill in the blanks
+      wfuzzh = eval(File.open("config/tools/wfuzz.cfg","r").read)
+      
+      if !wfuzzh["auth_name_dict"].nil?
+        wfuzzcmd.gsub!("$userdict$",wfuzzh["auth_name_dict"])      
+      else
+        wfuzzcmd.gsub!("$userdict$",defaultuserdic)        
+      end      
+      if !wfuzzh["auth_pass_dict"].nil?
+        wfuzzcmd.gsub!("$passdict$",wfuzzh["auth_pass_dict"])      
+      else
+        wfuzzcmd.gsub!("$passdict$",defaultuserdic)        
+      end      
+      if !wfuzzh["threads"].nil?
+        wfuzzcmd.gsub!("$threads$",wfuzzh["threads"].to_s)      
+      else
+        wfuzzcmd.gsub!("$threads$",defaultthreads)        
+      end      
+      if !wfuzzh["delay"].nil?
+        wfuzzcmd.gsub!("$delay$",wfuzzh["delay"].to_s)      
+      else
+        wfuzzcmd.gsub!("$delay$",defaultdelay)        
+      end      
+      if !wfuzzh["ignore"].nil?
+        wfuzzcmd.gsub!("$ignorec$",wfuzzh["ignore"])      
+      else
+        wfuzzcmd.gsub!("$ignorec$",defaultdic)        
+      end
+      
+      @log.debug "Executing the following command #{wfuzzcmd}"
+      wfuzzres = `#{wfuzzcmd}`
+      
+      File.open(forbidden_output,"r").each {|line|
+        m_validcreds = /.*C=200.*\" - (.*) - (.*)\"/.match(line)
+        if !m_validcreds.nil? and !m_validcreds[1].nil? and !m_validcreds[2].nil? 
+          validuser = m_validcreds[1]
+          validpass = m_validcreds[2]
+          puts "Credenciales validos encontrados! => #{validuser}:#{validpass}"   
+          validcredentials << "#{validuser}:#{validpass}"      
+        end
+      }
+      return validcredentials
+    else
+      return nil
+    end    
+  end
   
-  def fuzzDisalowedEntry(disentry)
+  #############
+  
+  # This funciont fuzz possible URLs
+  def fuzzDisallowedEntry(disentry)
     
     defaultdic = "/usr/share/wfuzz/wordlist/general/common.txt"
-    defaultdelay = 0.3
-    defaultthreads =  10
+    defaultdelay = "0.3"
+    defaultthreads =  "10"
     defaultignorec = "404,400"
     clean_disentry = disentry.gsub("$","")
     disentry_output = "/tmp/#{clean_disentry.gsub("/","_").gsub(":","").gsub("*","FUZZ")}.html"
@@ -591,24 +678,22 @@ class RobotsRider
       else
         wfuzzcmd.gsub!("$dict$",defaultdic)        
       end
-      
-      if !wfuzzh["ignore"].nil?
-        wfuzzcmd.gsub!("$ignorec$",wfuzzh["ignore"])      
+      if !wfuzzh["threads"].nil?
+        wfuzzcmd.gsub!("$threads$",wfuzzh["threads"].to_s)      
       else
-        wfuzzcmd.gsub!("$ignorec$",defaulignore)        
-      end
-      
+        wfuzzcmd.gsub!("$threads$",defaultthreads)        
+      end      
+      if !wfuzzh["delay"].nil?
+        wfuzzcmd.gsub!("$delay$",wfuzzh["delay"].to_s)      
+      else
+        wfuzzcmd.gsub!("$delay$",defaultdelay)        
+      end      
       if !wfuzzh["ignore"].nil?
         wfuzzcmd.gsub!("$ignorec$",wfuzzh["ignore"])      
       else
         wfuzzcmd.gsub!("$ignorec$",defaultdic)        
       end
       
-      if !wfuzzh["ignore"].nil?
-        wfuzzcmd.gsub!("$ignorec$",wfuzzh["ignore"])      
-      else
-        wfuzzcmd.gsub!("$ignorec$",defaultdic)        
-      end
       
       @log.debug "Executing the following command #{wfuzzcmd}"
       # puts "Executing the following command #{wfuzzcmd}. Be patient"
@@ -719,14 +804,20 @@ class RobotsRider
     end
   end
   
+  #############
+  
   # Not a very acurate way of detect name and version of a CMS...
   def getNameAndVersionFromString(cmsstr)
     name = version = nil
     # Words followed by a string with numbers and points 
-    m = /([^\d]+)\s+(\d+(\.\d+)*)\s*.*/.match(cmsstr)
+    m = /([^\s]+)\s+(\d+(\.\d+)*)?\s*.*/.match(cmsstr)
     if !m.nil?
       name = m[1]
       version = m[2]
+    else 
+      name = cmsstr
+      version = "<UNKNOWN>"
+      name = "<UNKNOWN>" if name.nil? or name.size == 0
     end
     return name,version
   end
@@ -737,18 +828,41 @@ class RobotsRider
     # This method launch the CMS scanners to all the identified CMS sites
     # webs Is an array of Webs objects to iterate 
     @robotswebs.each {|rweb|
-      puts "URL: #{rweb.url}"    
-      puts "CMS Name: #{rweb.cms[:name]}"
-      puts "CMS Version: #{rweb.cms[:version]}"
-      rweb.disalowed.each{|disurl,vals|
-        puts disurl
-        puts " -> Response: #{vals[:response]}"
-        puts " -> Interesting Title?: #{vals[:interestingparts][:title]}"
-        puts " -> Interesting URL?: #{vals[:interestingparts][:url]}"
-        puts " -> Interesting Body?: #{vals[:interestingparts][:body]}"
-      }
+      puts 
+      puts "#"*(rweb.url.length + 4)
+      puts "# #{rweb.url} #"
+      puts "#"*(rweb.url.length + 4)
+      if rweb.cms[:name] == "<UNKNOWN>"
+        print "[NOT SCANNING]: ".red
+        puts "We couldn't detect a CMS"
+      else
+        print "[SCANNING]: ".green
+        puts "Releasing the dogs for '#{rweb.cms[:name]} #{rweb.cms[:version]}'"
+        launchCMSScans(rweb.cms[:name],URI.parse(rweb.url))        
+      end
     }
     
+  end
+  
+  #############
+  
+  def releaseTheKraken()
+    # Start bruteforce to all 403 pages
+    @robotswebs.each {|rweb|
+      rweb.disallowed.each {|disentry,vals|
+        if vals[:response].to_i == 403
+          # Bruteforce the authenticatio
+          @log.info("Bruteforcing #{disentry}")
+          print " [BRUTEFORCING]".red
+          puts " #{disentry}"
+          fuzzForbiddenEntry(disentry)
+        else
+          @log.info("Not bruteforcing #{disentry} because is not a Forbidden entry")
+          print " [NOT BRUTEFORCING]".green
+          puts " #{disentry}"
+        end
+      }
+    }
   end
   
   #############
@@ -776,175 +890,178 @@ class RobotsRider
         uri = URI.parse(url)
         # Deducing CMS by Generator Tag and Powered By Text 
         @log.debug "Searching for Generator tag and Powered By text in #{url}..."
-        rootbody = uri.read 
-        generator = findCMSByGeneratorTag(rootbody)
-        poweredby = findCMSByPoweredByText(rootbody)
-        rweb.generators << generator
-        rweb.poweredby << poweredby
-        if !generator.nil?
-          if generator.size > 0
-            @log.debug "Found generator #{generator}..."
-            print "Found generator "
-            puts "#{generator}".green
-            cmsname = generator
-          end           
-        end        
-        if !poweredby.nil?
-          if poweredby.size > 0
-            @log.debug "Found generator #{poweredby}..."
-            print "Found generator "
-            puts "#{poweredby}".green
-            cmsname = poweredby if cmsname.size == 0
-          end           
-        end
-        # Looking for robots.txt file
-        @log.debug "Searching for robots.txt file..."
-        puts
-        puts "Searching for robots.txt file..."
-        robotsurl = "#{uri.scheme}://#{uri.host}/robots.txt"
-        rweb.robots[:url] = robotsurl
-        # TODO: Change timeout for the HTTP connexion (https://stackoverflow.com/questions/13074779/ruby-nethttp-idle-timeout)
-        robots_response = fetch(robotsurl)
-        rweb.robots[:response] = robots_response.code.to_i
-        if robots_response.code.to_i == 200
-          @log.info("It seems #{robotsurl} is accesible (#{robots_response.code}).")
-          print "[FOUND] (#{robots_response.code}): ".green
-          puts "#{robotsurl}"
-          robots_body = robots_response.body
-          if !robots_body.nil?
-            if robots_body.length > 0
-              # Deduce the CMS from the robots.txt entries
-              @log.debug "Deducing CMS from '#{robotsurl}' file."
-              puts
-              puts "Deducing CMS from '#{robotsurl}' file"
-              deducedCMSs = deducePossiblesCMS(robots_body)
-              @log.info("Possibles CMS engines detected #{deducedCMSs}")
-              firstcms = 0
-              deducedCMSs.each{|possiblecms|
-                firstcms += 1
-                if (possiblecms[1] > @@CMSCONFIDENCE)
-                  print " [POSSIBLE CMS]: ".green
-                  puts "#{possiblecms[0]} (#{(possiblecms[1]*100)}% coincidences)"
-                  cmsname = possiblecms[0] if cmsname.size == 0 and firstcms == 1
-                end                
-              }
-              @log.debug  "Searching for 'Disallowed' URLs"
-              puts
-              puts "Searching for 'Disallowed' URLs..."
-              robots_body.split("\n").each {|rline|
-                disallowm =  /^\s*Disallow\s*:\s*(.*)\s*$/.match(rline)  
-                if disallowm
-                  prohibido = disallowm.captures[0].strip
-                  if prohibido.length > 0 and prohibido.strip != "/"
-                    if prohibido[0]=="/"
-                      prohibido =  prohibido[1,prohibido.length-1]
-                    end
-                    
-                    disurl = "#{uri.scheme}://#{uri.host}/#{prohibido}"
-                    @log.info "Found '#{disurl}' as a disallowed entry."  
-                    rweb_dentry = rweb.addDisallowedEntry(disurl)                
+        # If the connection is not produced after X seconds we can conclude this is not a web server 
+        # and skip further tests
+        rootbody = ""
+        begin
+          Timeout::timeout(@@CONNECTTIMEOUT) do
+            rootbody = uri.read 
+          end
+          # If previous block does not timeout, continue with the web tests
+          generator = findCMSByGeneratorTag(rootbody)
+          poweredby = findCMSByPoweredByText(rootbody)
+          rweb.generators << generator
+          rweb.poweredby << poweredby
+          if !generator.nil?
+            if generator.size > 0
+              @log.debug "Found generator #{generator}..."
+              print "Found generator "
+              puts "#{generator}".green
+              cmsname = generator
+            end           
+          end        
+          if !poweredby.nil?
+            if poweredby.size > 0
+              @log.debug "Found generator #{poweredby}..."
+              print "Found generator "
+              puts "#{poweredby}".green
+              cmsname = poweredby if cmsname.size == 0
+            end           
+          end
+          # Looking for robots.txt file
+          @log.debug "Searching for robots.txt file..."
+          puts
+          puts "Searching for robots.txt file..."
+          robotsurl = "#{uri.scheme}://#{uri.host}/robots.txt"
+          rweb.robots[:url] = robotsurl
+          # TODO: Change timeout for the HTTP connexion (https://stackoverflow.com/questions/13074779/ruby-nethttp-idle-timeout)
+          robots_response = fetch(robotsurl)
+          rweb.robots[:response] = robots_response.code.to_i
+          if robots_response.code.to_i == 200
+            @log.info("It seems #{robotsurl} is accesible (#{robots_response.code}).")
+            print " [FOUND] (#{robots_response.code}): ".green
+            puts "#{robotsurl}"
+            robots_body = robots_response.body
+            if !robots_body.nil?
+              if robots_body.length > 0
+                # Deduce the CMS from the robots.txt entries
+                @log.debug "Deducing CMS from '#{robotsurl}' file."
+                puts
+                puts "Deducing CMS from '#{robotsurl}' file"
+                deducedCMSs = deducePossiblesCMS(robots_body)
+                @log.info("Possibles CMS engines detected #{deducedCMSs}")
+                firstcms = 0
+                deducedCMSs.each{|possiblecms|
+                  firstcms += 1
+                  if (possiblecms[1] > @@CMSCONFIDENCE)
+                    print " [POSSIBLE CMS]: ".green
+                    puts "#{possiblecms[0]} (#{(possiblecms[1]*100)}% coincidences)"
+                    cmsname = possiblecms[0] if cmsname.size == 0 and firstcms == 1
+                  end                
+                }
+                puts " No CMS could be deduced from file 'robots.txt'" if cmsname.size == 0
+                @log.debug  "Searching for 'Disallowed' URLs"
+                puts
+                puts "Searching for 'Disallowed' URLs..."
+                robots_body.split("\n").each {|rline|
+                  disallowm =  /^\s*Disallow\s*:\s*(.*)\s*$/.match(rline)  
+                  if disallowm
+                    prohibido = disallowm.captures[0].strip
+                    if prohibido.length > 0 and prohibido.strip != "/"
+                      if prohibido[0]=="/"
+                        prohibido =  prohibido[1,prohibido.length-1]
+                      end
                       
-                    if @visit
-                      # If disallowed entry has wildcards, skip it from visiting
-                      if (prohibido.match(/\*/).nil?)
-                        savefile = "#{visiteddir}#{disurl.gsub("/","_").gsub(":","_")}"
-                        @log.info("Visiting #{disurl} and saving in file #{savefile}")
-                        dis_response = fetch(disurl)
-                        rweb_dentry[:response] = dis_response.code.to_i
-                        # Check if is a Juicy URL
-                        interestingparts={:body=>nil,:url=>nil,:title=>nil}
-                        if dis_response.code.to_i == 200
-                          # Search for juicy words in the url
-                          @log.info "URL '#{disurl}' exists."
-                          print "[FOUND] (#{dis_response.code}): ".green
-                          puts "#{disurl}"
-                          # Is this URL interesting?
-                          if hasJuicyUrl?(prohibido)
-                            @log.info "URL '#{disurl}' exists. (And it seems interesting)"
-                            puts " |-> [INTERESTING PATH]".red
-                          end
-                          # Is the body interesting?
-                          if !(jw = hasJuicyWords?(dis_response.body)).nil?
-                            @log.info "URL '#{disurl}' exists. (And it seems interesting in his body)"
-                            jw.each{ |k,v|
-                              puts " |-> [INTERESTING TEXT]: '#{v}'"                          
-                            }
-                            interestingparts[:body] = true    
-                          end
-                          # Is the title interesting?
-                          if hasJuicyTitle?(dis_response.body)
-                            @log.info "URL '#{disurl}' exists. (And it seems interesting in his Title)"
-                            # puts " It seems interesting in his page Title!".red
-                            puts " |-> [INTERESTING TITLE]".red
-                            interestingparts[:title] = true  
-                          end
-                          rweb_dentry[:interestingparts] = interestingparts
-                          sf = File.open(savefile,"w")
-                          sf.write(dis_response.body)
-                          sf.close
-                        else
-                          @log.debug "URL '#{disurl}' is not accessible. (#{dis_response.code})"
-                          print "[NOT ACCESSIBLE] (#{dis_response.code}): ".light_red
-                          puts "#{disurl}"
-                          # Is this URL interesting?
-                          if hasJuicyUrl?(prohibido)
-                            @log.info "URL '#{disurl}' is not accessible. (But it seems interesting)"
-                            puts " |-> [INTERESTING PATH]".red
-                            interestingparts[:url] = true
-                          end
-                        end
-                      else
-                        # TODO: Support more than one wildcard in the URL
-                        if @fuzz_urls and !@wfuzzpath.nil?
-                          if disurl.count("*") == 1
-                            @log.info("Widlcard found. Fuzzing with 'wfuzz'")
-                            puts "Widlcard found in #{disurl}. Fuzzing it!"
-                            # Fuzz this URL with wfuzz
-                            fuzzdictionary = fuzzDisalowedEntry(disurl)
-                            if fuzzdictionary.size == 0
-                              @log.info "Fuzzer didn't find anything"
-                              puts "Fuzzer didn't find anything"
-                            else
-                              fuzzdictionary.each {|f_href,f_code|
-                                if f_code.to_i == 200
-                                  print "[FUZZ FOUND] (#{f_code}): ".green
-                                else
-                                  print "[FUZZ FOUND] (#{f_code}): "                            
-                                end
-                                puts "#{f_href}"
-                              }                              
+                      disurl = "#{uri.scheme}://#{uri.host}/#{prohibido}"
+                      @log.info "Found '#{disurl}' as a disallowed entry."  
+                      rweb_dentry = rweb.addDisallowedEntry(disurl)                
+                        
+                      if @visit
+                        # If disallowed entry has wildcards, skip it from visiting
+                        if (prohibido.match(/\*/).nil?)
+                          savefile = "#{visiteddir}#{disurl.gsub("/","_").gsub(":","_")}"
+                          @log.info("Visiting #{disurl} and saving in file #{savefile}")
+                          dis_response = fetch(disurl)
+                          rweb_dentry[:response] = dis_response.code.to_i
+                          # Check if is a Juicy URL
+                          interestingparts={:body=>false,:url=>false,:title=>false}
+                          if dis_response.code.to_i == 200
+                            # Search for juicy words in the url
+                            @log.info "URL '#{disurl}' exists."
+                            print " [FOUND] (#{dis_response.code}): ".green
+                            puts "#{disurl}"
+                            # Is this URL interesting?
+                            if hasJuicyUrl?(prohibido)
+                              @log.info "URL '#{disurl}' exists. (And it seems interesting)"
+                              puts "  |-> [INTERESTING PATH]".red
+                              interestingparts[:url] = true    
                             end
+                            # Is the body interesting?
+                            if !(jw = hasJuicyWords?(dis_response.body)).nil?
+                              @log.info "URL '#{disurl}' exists. (And it seems interesting in his body)"
+                              jw.each{ |k,v|
+                                puts "  |-> [INTERESTING TEXT]: '#{v}'".red                        
+                              }
+                              interestingparts[:body] = true    
+                            end
+                            # Is the title interesting?
+                            if hasJuicyTitle?(dis_response.body)
+                              @log.info "URL '#{disurl}' exists. (And it seems interesting in his Title)"
+                              # puts " It seems interesting in his page Title!".red
+                              puts "  |-> [INTERESTING TITLE]".red
+                              interestingparts[:title] = true  
+                            end
+                            rweb_dentry[:interestingparts] = interestingparts
+                            sf = File.open(savefile,"w")
+                            sf.write(dis_response.body)
+                            sf.close
                           else
-                            @log.info("Disallowed entry '#{disurl}' has more than one wildcard '*'. Not fuzzing.")
-                          end 
+                            @log.debug "URL '#{disurl}' is not accessible. (#{dis_response.code})"
+                            print " [NOT ACCESSIBLE] (#{dis_response.code}): ".light_red
+                            puts "#{disurl}"
+                            # Is this URL interesting?
+                            if hasJuicyUrl?(prohibido)
+                              @log.info "URL '#{disurl}' is not accessible. (But it seems interesting)"
+                              puts "  |-> [INTERESTING PATH]".red
+                              interestingparts[:url] = true
+                            end
+                          end
                         else
-                          @log.info("Disallowed entry has wildcards '*'. Not visiting.")
+                          # TODO: Support more than one wildcard in the URL
+                          if @fuzz_urls and !@wfuzzpath.nil?
+                            if disurl.count("*") == 1
+                              @log.info("Widlcard found. Fuzzing with 'wfuzz'")
+                              puts "Widlcard found in #{disurl}. Fuzzing it!"
+                              # Fuzz this URL with wfuzz
+                              fuzzdictionary = fuzzDisallowedEntry(disurl)
+                              if fuzzdictionary.size == 0
+                                @log.info "Fuzzer didn't find anything"
+                                puts "Fuzzer didn't find anything"
+                              else
+                                fuzzdictionary.each {|f_href,f_code|
+                                  if f_code.to_i == 200
+                                    print "[FUZZ FOUND] (#{f_code}): ".green
+                                  else
+                                    print "[FUZZ FOUND] (#{f_code}): "                            
+                                  end
+                                  puts "#{f_href}"
+                                }                              
+                              end
+                            else
+                              @log.info("Disallowed entry '#{disurl}' has more than one wildcard '*'. Not fuzzing.")
+                            end 
+                          else
+                            @log.info("Disallowed entry has wildcards '*'. Not visiting.")
+                          end
                         end
                       end
                     end
                   end
-                end
-              }
+                }
+              else
+                @log.warn("Request to #{robotsurl} returned empty body. Skipping.")
+              end
             else
-              @log.warn("Request to #{robotsurl} returned empty body. Skipping.")
+              @log.warn("Request to #{robotsurl} was not successfull. Skipping.")
             end
-          else
-            @log.warn("Request to #{robotsurl} was not successfull. Skipping.")
+          else # if robots_response.code == 200
+            @log.warn("It seems #{robotsurl} is not accesible (#{robots_response.code}).")
+            print " [NOT FOUND] (#{robots_response.code}): ".light_red
+            puts "#{robotsurl}"
           end
-        else # if robots_response.code == 200
-          @log.warn("It seems #{robotsurl} is not accesible (#{robots_response.code}).")
-          print "[NOT FOUND] (#{robots_response.code}): ".light_red
-          puts "#{robotsurl}"
+        rescue Timeout::Error => te
+          $stderr.puts "Connection timed out. It seems this host is not a web server. Skipping further tests."
         end
-        # Launch vulnerability scan for detected CMS
-=begin
-        if cmsname.size > 0
-          launchCMSScans(cmsname,uri)
-        else
-          @log.info("No CMS was detected form #{uri}. Skipping vulnerability scan.")
-          puts "No CMS was detected form #{uri}. Skipping vulnerability scan.".red
-        end
-=end
       rescue URI::BadURIError, URI::InvalidURIError => e
         @log.error("The specified URL #{url} is not valid. Ignoring...")
         @log.error("Error: #{e.message}") 
@@ -964,7 +1081,6 @@ class RobotsRider
       rweb.cms[:name],rweb.cms[:version] = getNameAndVersionFromString(cmsname)
       # Save possible CMS 
       @log.info("Obtained CMS Name and version: #{rweb.cms[:name]}, #{rweb.cms[:version]}")
-      puts "Obtained CMS Name and version: #{rweb.cms[:name]} #{rweb.cms[:version]}"
       # Append this robot web information
       @robotswebs << rweb
     }
@@ -1096,6 +1212,88 @@ class RobotsRider
     return scanners, tools
   end
   
+  ##########################
+  
+  def saveHTMLReport(ofile)
+    # STUB: Save output in a beautiful HTML 
+    # Template to use is located in "samples/scan.output.sample.html"
+    if !@outputfile.nil?
+      puts "STUB: Saving summary to #{@outputfile}"
+    end
+    return false
+  end
+  
+  ##########################
+  
+  def saveCSVReport(ofile)
+    # Save output in CSV
+    if !ofile.nil? and @robotswebs.size > 0
+      of = File.open(ofile,"w")
+      of.puts('URL;Robots.txt;CMS Name;CMS Version;Disallowed URL;Dis. Response;Interesting Title;Interesting URL;Interesting Body')
+      @robotswebs.each {|rweb|
+        rweb.disallowed.each{|disurl,vals|
+          # Default text
+          robotsfield = "<UNKNOWN>"
+          cmsname = "<UNKNOWN>"
+          cmsversion = "<UNKNOWN>"
+          durl = "<UNKNOWN>"
+          disresponse = "<UNKNOWN>"
+          ititle = "<UNKNOWN>"
+          ibody = "<UNKNOWN>"
+          iurl = "<UNKNOWN>"
+          
+          if !rweb.robots[:url].nil? and !rweb.robots[:response].nil?
+            if rweb.robots[:response].to_i == 200
+              robotsfield = "ACCESSIBLE (200)"
+            else
+              robotsfield = "NOT ACCESSIBLE (#{rweb.robots[:response]})"
+            end
+          end
+          cmsname = "#{rweb.cms[:name]}" if !rweb.cms[:name].nil? and rweb.cms[:name].size > 0
+          cmsversion = "#{rweb.cms[:version]}" if !rweb.cms[:version].nil? and rweb.cms[:name].size > 0
+          durl = "#{disurl}" if !disurl.nil? and disurl.size > 0
+          disresponse = "#{vals[:response]}" if !vals[:response].nil? and vals[:response].size > 0
+          # Interesting title?
+          if !vals[:interestingparts][:title].nil?
+            if vals[:interestingparts][:title]
+              ititle = "YES"
+            else
+              ititle = "NO"
+            end
+          end
+          # Interesting body?
+          if !vals[:interestingparts][:body].nil?
+            if vals[:interestingparts][:body]
+              ibody = "YES"
+            else
+              ibody = "NO"
+            end
+          end
+          # Interesting URL?
+          if !vals[:interestingparts][:url].nil?
+            if vals[:interestingparts][:url]
+              iurl = "YES"
+            else
+              iurl = "NO"
+            end
+          end
+
+          of.puts("\"#{rweb.url}\";\"#{robotsfield}\";\"#{cmsname}\";\"#{cmsversion}\";\"#{durl}\";\"#{disresponse}\";\"#{ititle}\";\"#{ibody}\";\"#{iurl}\"")
+        }
+      }
+      of.close
+      return true
+    end
+    return false
+  end
+
+  ##########################
+  
+  def saveReports(ofile)
+    saveCSVReport(ofile)
+    # saveHTMLReport(ofile)
+  end
+
   ##########################
   
 end # class RobotsRider

@@ -1,0 +1,2 @@
+[ERROR] cannot load such file -- terminal-table
+[TIP] Try to run 'gem install terminal-table' or 'gem install --user-install terminal-table'. If you still get an error, Please see README file or https://github.com/wpscanteam/wpscan
