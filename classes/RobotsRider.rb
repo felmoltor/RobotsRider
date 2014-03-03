@@ -171,10 +171,10 @@ class RobotsRider
   #############
   
   def printVulnScanOutput(outfile)
-    puts " > Scan resuls extracted from #{outfile}".on_blue
+    puts " >> Scan resuls extracted from #{outfile}"
     of = File.open(outfile,"r")
     of.each{|line|
-      print " > #{line}".on_blue
+      print " >> #{line}"
     }    
   end
   
@@ -192,6 +192,7 @@ class RobotsRider
     end
     @log.debug "Launching DPScan #{dpscancmd}"
     puts "Launching DPScan. This could take a while, please be patient..."
+    puts "dpscancmd: #{dpscancmd}"
     dpoutput = %x(python #{dpscancmd} > #{outfile})
     @log.info("Exit status of the scan #{$?.exitstatus}")
     if $?.exitstatus != 0 or File.zero?(outfile)
@@ -224,7 +225,6 @@ class RobotsRider
     @log.debug "Launching plown: #{plowncmd}"
     puts "Launching Plown. This could take a while, you can check the process of the scan executing 'tail -f #{outfile}'"
     plownout = %x(#{plowncmd} > #{outfile})
-    
     @log.info("Exit status of the scan #{$?.exitstatus}")
     if $?.exitstatus != 0 or File.zero?(outfile)
       puts "There was an error doing this scan!".red
@@ -771,31 +771,31 @@ class RobotsRider
   
   #############
   
-  def launchCMSScans(cmsname,uri)
+  def launchCMSScans(cmsname,url)
     # If the CMS is WP or Joomla or Drupal, execute the scanners
     if cmsname.downcase.include?("joomla")
       if @joomscanconfig["enabled"].to_i != 0
-        launchJoomscan("#{uri.scheme}://#{uri.host}/")
+        launchJoomscan("#{url}")
       else
-        @log.debug("Not scanning with joomscan '#{uri.scheme}://#{uri.host}/'")
+        @log.debug("Not scanning with joomscan '#{url}'")
       end
     elsif cmsname.downcase.include?("wordpress")
       if @wpscanconfig["enabled"].to_i != 0
-        launchWPScan("#{uri.scheme}://#{uri.host}/")
+        launchWPScan("#{url}")
       else
-        @log.debug("Not scanning with wpscan '#{uri.scheme}://#{uri.host}/'")
+        @log.debug("Not scanning with wpscan '#{url}'")
       end
     elsif cmsname.downcase.include?("drupal")
       if @dpscanconfig["enabled"].to_i != 0
-        launchDPScan("#{uri.scheme}://#{uri.host}/")
+        launchDPScan("#{url}")
       else
-        @log.debug("Not scanning with dpscan '#{uri.scheme}://#{uri.host}/'")
+        @log.debug("Not scanning with dpscan '#{url}'")
       end
     elsif cmsname.downcase.include?("plone")
       if @plownconfig["enabled"].to_i != 0
-        launchPlown("#{uri.scheme}://#{uri.host}/")
+        launchPlown("#{url}")
       else
-        @log.debug("Not scanning with plown '#{uri.scheme}://#{uri.host}/'")
+        @log.debug("Not scanning with plown '#{url}'")
       end
       # If the user has no plown installed tell him to download it from https://github.com/unweb/plown
     else
@@ -837,7 +837,7 @@ class RobotsRider
       else
         print "[SCANNING]: ".green
         puts "Releasing the dogs for '#{rweb.cms[:name]} #{rweb.cms[:version]}'"
-        launchCMSScans(rweb.cms[:name],URI.parse(rweb.url))        
+        launchCMSScans(rweb.cms[:name],rweb.url)        
       end
     }
     
@@ -861,8 +861,8 @@ class RobotsRider
           end
         else
           @log.info("Not bruteforcing #{disentry} because is not a Forbidden entry")
-          print " [NOT BRUTEFORCING]".green
-          puts " #{disentry}"
+          # print " [NOT BRUTEFORCING]".green
+          # puts " #{disentry}"
         end
       }
     }

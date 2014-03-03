@@ -5,8 +5,8 @@ Summary
 -------
 
 * __Author__: Felipe Molina ([@felmoltor](https://twitter.com/felmoltor))
-* __Version__: 0.3
-* __Summary__: Detects and deduce CMS from robots.txt, generator Tags, Powered By text. Then, optionaly launch CMS scanners to the targets.
+* __Version__: 0.4
+* __Summary__: Detects and deduce CMS from robots.txt, generator Tags, Powered By text. Then, optionaly launch CMS scanners to the targets and bruteforce on basic authentication.
 * __Warning__: Check the "__Required third party binaries__" section to download them before executing this tool. 
 
 Introduction
@@ -29,12 +29,14 @@ The __third step (3)__ is to execute the appropiate CMS vulnerability scanner wh
 
 - __WPScan__: Configured in file 'config/scanners/wpscan.cfg'
 - __Joomscan__: Configured in file 'config/scanners/joomscan.cfg' _*_
-- __DPScan__: Configured in file 'config/scanners/joomscan.cfg'
-- __Plown__: Configured in file 'config/scanners/joomscan.cfg'
+- __DPScan__: Configured in file 'config/scanners/dpscan.cfg'
+- __Plown__: Configured in file 'config/scanners/plown.cfg'
 
 *Warning*: Current version of Joomscan (0.0.4 - Not maintained anymore) is not correctly working if you invoke the perl script from anywhere in your file system. It only works when you invoke 'joomscan.pl' in the same folder this script it is. To __fix__ this you'll have to overwrite the original 'joomscan.pl' with this patched one (http://pastebin.com/tJxLBcy9).
 
 All those scanners ought to be avaliable in your system before complete this vulnerability phase successfuly. The paths to this scanners must be customized in their own configuration files.
+
+The __fourth step (4)__ is to bruteforce the pages with HTTP response code of "Authentication Required" 401. The username and password dictionary files can be customized in file 'config/tools/wfuzz.cfg'.
 
 Usage
 -----
@@ -46,9 +48,11 @@ Usage: ./robotsrider.rb [OPTIONS]
     -d, --domain DOMAIN              Domain to explore for robots.txt (This option needs program 'theharvester' in your PATH)
     -u, --urls FILE                  File containing the list of URLs to check for robots.txt
     -v, --[no-]visit                 Visit the disallowed entries and record the server response [default: True]
-    -F, --[no-]follow                Follow redirect for disallowed entries with 30X responses [default: False]
-    -w, --[no-]wfuzz                 Use wfuzz program to fuzz wildcards in the disallowed entries [Default: False]
-    -o, --output                     TODO: Save the summary of the execution to this beautiful HTML file
+    -f, --[no-]follow                Follow redirect for disallowed entries with 30X responses [default: False]
+    -w, --[no-]wildcards-fuzz        Use wfuzz program to fuzz wildcards in the disallowed entries [default: False]
+    -b, --[no-]bruteforce            Use wfuzz program to bruteforce Basic Authentication on 401 [default: False]
+    -s, --[no-]scan-vulns            Use vulnerability scanners to scan detected CMS sites [default: False]
+    -o, --output [OFILE]             Save the summary of the execution to this CSV file
     -L, --loglevel [LOGLEVEL]        Set loggin level (DEBUG, INFO, WARN, ERROR, FATAL)  [default: DEBUG]
     -h, --help                       Help screen
 ```
@@ -59,9 +63,10 @@ Options Details
 * __-d, --domain__: If you provide this option you'l need to have installed and in your PATH the program 'theharvester'. It recollects information about the domain you wan to test and its output will be parsed to obtain all the subdomains related with it. Then, with all those subdomains and virtual hosts, file 'robots.txt' will be requested and explored.
 * __-u, --urls__: You provide a file with a big list of URL you want to test with Robots Rider. Either you provide this option or you provide '-d' option. One of this two options is mandatory.
 * __-v, --[no-]visit__: This flag tells Robots Rider if he is allowed to visit, explore and save the disallowed entries found in robots.txt. If you don't provide this option Robots Rider will only list the disallowed entries found in robots.txt
-* __-F, --[no-]follow__: Follow redirections or not (Usually 301 and 302 codes).
+* __-f, --[no-]follow__: Follow redirections or not (Usually 301 and 302 codes).
 * __-w, --[no-]wfuzz__: You'll need to have installed and in your PATH the program 'wfuzz'. When a wildcard ('\*') is found in a disallowed entry, Robots Rider can use a dictionary to fuzz this wildcard. For example, if there is a disallowed entry like this '/informes/\*.zip', the fuzzer will use a dictionary provided by you to substitute the wildcard. The dictionary used can be configured in file 'config/wfuzz.cfg'.
-* __-o, --output__: NOT IMPLEMENTED. Output file name to save the results.
+* __-b, --[no-]bruteforce__: Will bruteforce the basic authentication of the pages found with response code 401. 
+* __-o, --output__: Output file name to save the results in a CSV file.
 * __-L, --loglevel__: This is the level of verbosity that will be recorded in the logs.
 
 Required gems

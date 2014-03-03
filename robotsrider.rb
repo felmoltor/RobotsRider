@@ -42,7 +42,7 @@ def parseOptions()
     opts.on( '-f', '--[no-]follow', 'Follow redirect for disallowed entries with 30X responses [default: False]' ) do |follow|
       options[:follow] = follow
     end
-    opts.on( '-D', '--[no-]fuzz-wildcards', "Use wfuzz program to fuzz wildcards in the disallowed entries [Default: False]" ) do |fuzz|
+    opts.on( '-w', '--[no-]fuzz-wildcards', "Use wfuzz program to fuzz wildcards in the disallowed entries [Default: False]" ) do |fuzz|
       options[:fuzz] = fuzz
     end
     opts.on( '-b', '--[no-]bruteforce', "Use wfuzz program to bruteforce Basic Authentication on 401 [Default: False]" ) do |fuzzauth|
