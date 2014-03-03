@@ -5,9 +5,10 @@ require './classes/RobotsRider'
 require 'optparse'
 require 'colorize'
 require 'fileutils'
-require 'pp'
 
 # TODO: Save in summary the results in HTML or XML
+# TODO: Set up an instalation phase to download automatically all the third party scanners and tools needed
+# TODO: Si encontramos formularios de login en alguna de las web, podemos lanzar una fuerza bruta de autenticación automáticamente.
 
 $SCRIPT_VERSION = "0.3"
 
@@ -21,6 +22,7 @@ def parseOptions()
     :follow => false, 
     :fuzz => false,
     :vulnscan => false,
+    :fuzzauth => false,
     :outputfile => nil, 
     :loglevel => "DEBUG"
   }
@@ -37,16 +39,19 @@ def parseOptions()
     opts.on( '-v', '--[no-]visit', 'Visit the disallowed entries and record the server response [default: True]' ) do |visit|
       options[:visit] = visit
     end
-    opts.on( '-F', '--[no-]follow', 'Follow redirect for disallowed entries with 30X responses [default: False]' ) do |follow|
+    opts.on( '-f', '--[no-]follow', 'Follow redirect for disallowed entries with 30X responses [default: False]' ) do |follow|
       options[:follow] = follow
     end
-    opts.on( '-w', '--[no-]wfuzz', "Use wfuzz program to fuzz wildcards in the disallowed entries [Default: False]" ) do |fuzz|
+    opts.on( '-D', '--[no-]fuzz-wildcards', "Use wfuzz program to fuzz wildcards in the disallowed entries [Default: False]" ) do |fuzz|
       options[:fuzz] = fuzz
+    end
+    opts.on( '-b', '--[no-]bruteforce', "Use wfuzz program to bruteforce Basic Authentication on 401 [Default: False]" ) do |fuzzauth|
+      options[:fuzzauth] = fuzzauth
     end
     opts.on( '-s', '--[no-]scan-vulns', "Use vulnerability scanners to scan detected CMS sites [Default: False]" ) do |vulnscan|
       options[:vulnscan] = vulnscan
     end
-    opts.on( '-o', '--output [OFILE]', 'TODO: Save the summary of the execution to this beautiful HTML file' ) do |ofile|
+    opts.on( '-o', '--output [OFILE]', 'Save the summary of the execution to this CSV file' ) do |ofile|
       options[:outputfile] = ofile
     end
     opts.on( '-L', '--loglevel [LOGLEVEL]', ["DEBUG","INFO","WARN","ERROR","FATAL"], 'Set loggin level (DEBUG, INFO, WARN, ERROR, FATAL)  [default: DEBUG]' ) do |loglevel|
@@ -70,25 +75,14 @@ def parseOptions()
   return options
 end
 
-
-##########################
-
-def saveReport(ofile)
-  # STUB: Save output in a beautiful HTML or XML
-  if !@outputfile.nil?
-    puts "STUB: Saving summary to #{@outputfile}"
-  end
-  return false
-end
-
 ##########################
 
 def initializeFolders()
-  if !Dir.exists?("visited")
-    Dir.mkdir("visited")
-  end
   if !Dir.exists?("logs")
     Dir.mkdir("logs")
+  end
+  if !Dir.exists?("outputs/visited")
+    Dir.mkdir("outputs/visited")
   end
   if !Dir.exists?("outputs/scanners/dpscan")
     FileUtils.mkdir_p("outputs/scanners/dpscan")
@@ -142,6 +136,21 @@ end
 
 ##########################
 
+def printKraken()
+  dogs = %q{
+      ,'""`.       ___________________
+     / _  _ \     /                   \
+     |(@)(@)|     |    Bruteforcing   |
+     )  __  (     | Forbidden entries |
+    /,'))((`.\   / ___________________/
+   (( ((  )) )) /_/
+    `\ `)(' /'
+}
+  puts dogs.cyan
+end
+
+##########################
+
 def printDogs()
   dogs = %q{
     .         |\      ___________________
@@ -182,6 +191,51 @@ def printBanner()
          """  
 }
   puts bender.cyan
+end
+
+##########################
+
+def printFoundCredentials(creds)
+  creds.each{|url,crd|
+    puts 
+    puts "#"*(url.length + 4)
+    puts "# #{url} #"
+    puts "#"*(url.length + 4)
+    
+    if !crd.nil? and crd.size > 0
+      puts "[CREDENTIALS FOUND]".green
+      crd.each {|c|
+        puts " - #{c} "
+      }
+      puts
+    else
+      print "[CREDENTIALS NOT FOUND]".red
+    end
+  }
+end
+##########################
+
+def avoidOverwritingOutput(ofile)
+  if File.exists?(ofile)
+    while 1 # Only finish when there is a correct choice
+      print "Output file '#{ofile}' already exists. What do you want to do? (O)verwrite,(S)kip saving output,(R)ename: "
+      c = gets.chomp.upcase
+      case c
+      when "O"
+        puts "Overwriting file..."
+        return ofile
+      when "S"
+        puts "Skipping the save output phase... "
+        return nil
+      when "R"
+        print "Please, provide the new name for the output file: "
+        newname = gets.chomp
+        return newname
+      end
+    end    
+  else
+    return ofile
+  end
 end
 
 ##########################
@@ -232,9 +286,34 @@ else
   puts
   puts "Releasing the dogs!"
   printDogs
-  vulnSummary = robotsrider.releaseTheDogs
+  robotsrider.releaseTheDogs
 end
 
-if (!op[:outputfile].nil? and !saveReport(op[:outputfile]))
-  $stderr.puts "Ups! There was an error saving the results in '#{op[:outputfile]}'. Please, check your permissions or something..."
+if !op[:fuzzauth]
+  puts "You don't want to bruteforce the Forbidden (403) URLs so we won't release the Kraken."
+else
+  puts
+  puts "Releasing the Kraken!"
+  printKraken
+  credentials = robotsrider.releaseTheKraken
+  if !credentials.nil? and credentials.size > 0
+    puts 
+    puts "#####################"
+    puts "# FOUND CREDENTIALS #"
+    puts "#####################"    
+    printFoundCredentials(credentials)
+  else
+    puts "No credentials were found :-(".red
+  end 
+end
+
+if (!op[:outputfile].nil?)
+  # Check if the output file already exists to avoid overwriting
+  ofile = avoidOverwritingOutput(op[:outputfile])
+  if !ofile.nil? and ofile.size > 0
+    saved = robotsrider.saveReports(ofile)
+    if !saved
+      $stderr.puts "Ops! There was an error saving the results in '#{ofile}'. Please, check your permissions or something..."
+    end
+  end
 end  

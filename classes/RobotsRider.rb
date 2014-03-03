@@ -339,7 +339,7 @@ class RobotsRider
     html_doc = Nokogiri::HTML(htmlcode)
     pagetitle = html_doc.css('title').text.upcase.gsub(/\s+/," ")
     @juicytitles.each {|jtitle|
-      jt = Regex.escape(jtitle)
+      jt = Regexp.escape(jtitle)
       if !pagetitle.match(jt).nil? 
         return true
       end
@@ -645,7 +645,6 @@ class RobotsRider
         if !m_validcreds.nil? and !m_validcreds[1].nil? and !m_validcreds[2].nil? 
           validuser = m_validcreds[1]
           validpass = m_validcreds[2]
-          puts "Credenciales validos encontrados! => #{validuser}:#{validpass}"   
           validcredentials << "#{validuser}:#{validpass}"      
         end
       }
@@ -848,14 +847,18 @@ class RobotsRider
   
   def releaseTheKraken()
     # Start bruteforce to all 403 pages
+    foundCredentials = {}
     @robotswebs.each {|rweb|
       rweb.disallowed.each {|disentry,vals|
-        if vals[:response].to_i == 403
+        if vals[:response].to_i == 401
           # Bruteforce the authenticatio
           @log.info("Bruteforcing #{disentry}")
           print " [BRUTEFORCING]".red
           puts " #{disentry}"
-          fuzzForbiddenEntry(disentry)
+          creds = fuzzForbiddenEntry(disentry)
+          if !creds.nil? and creds.size > 0
+            foundCredentials["#{disentry}"] = creds
+          end
         else
           @log.info("Not bruteforcing #{disentry} because is not a Forbidden entry")
           print " [NOT BRUTEFORCING]".green
@@ -863,6 +866,7 @@ class RobotsRider
         end
       }
     }
+    return foundCredentials
   end
   
   #############
@@ -922,7 +926,11 @@ class RobotsRider
           @log.debug "Searching for robots.txt file..."
           puts
           puts "Searching for robots.txt file..."
-          robotsurl = "#{uri.scheme}://#{uri.host}/robots.txt"
+          separator = "/"
+          if (uri.path.to_s[-1] == "/") 
+            separator = ""
+          end
+          robotsurl = "#{uri.scheme}://#{uri.host}#{uri.path}#{separator}robots.txt"
           rweb.robots[:url] = robotsurl
           # TODO: Change timeout for the HTTP connexion (https://stackoverflow.com/questions/13074779/ruby-nethttp-idle-timeout)
           robots_response = fetch(robotsurl)
@@ -958,12 +966,16 @@ class RobotsRider
                   if disallowm
                     prohibido = disallowm.captures[0].strip
                     if prohibido.length > 0 and prohibido.strip != "/"
+                      separator = "/"
+                      if (uri.path.to_s[-1] == "/") 
+                        separator = ""
+                      end
                       if prohibido[0]=="/"
                         prohibido =  prohibido[1,prohibido.length-1]
                       end
                       
-                      disurl = "#{uri.scheme}://#{uri.host}/#{prohibido}"
-                      @log.info "Found '#{disurl}' as a disallowed entry."  
+                      disurl = "#{uri.scheme}://#{uri.host}#{uri.path}#{separator}#{prohibido}" # "#{uri.scheme}://#{uri.host}/#{prohibido}"
+                      @log.info "Found '#{disurl}' as a disallowed entry."    
                       rweb_dentry = rweb.addDisallowedEntry(disurl)                
                         
                       if @visit
@@ -990,7 +1002,7 @@ class RobotsRider
                             if !(jw = hasJuicyWords?(dis_response.body)).nil?
                               @log.info "URL '#{disurl}' exists. (And it seems interesting in his body)"
                               jw.each{ |k,v|
-                                puts "  |-> [INTERESTING TEXT]: '#{v}'".red                        
+                                puts "  |-> [INTERESTING TEXT]: '#{k}'".red                        
                               }
                               interestingparts[:body] = true    
                             end
