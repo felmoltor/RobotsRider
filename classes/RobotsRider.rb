@@ -195,9 +195,12 @@ class RobotsRider
     puts "dpscancmd: #{dpscancmd}"
     dpoutput = %x(python #{dpscancmd} > #{outfile})
     @log.info("Exit status of the scan #{$?.exitstatus}")
-    if $?.exitstatus != 0 or File.zero?(outfile)
+    if $?.exitstatus != 0
       puts "There was an error doing this scan!".red
     else
+      if File.zero?(outfile)
+        @log.info("It seems the output of DPScan was empty...")
+      end
       # Output of the scan
       printVulnScanOutput(outfile)
     end
@@ -1290,7 +1293,7 @@ class RobotsRider
             end
           end
 
-          of.puts("\"#{rweb.url}\";\"#{robotsfield}\";\"#{cmsname}\";\"#{cmsversion}\";\"#{durl}\";\"#{disresponse}\";\"#{ititle}\";\"#{ibody}\";\"#{iurl}\"")
+          of.puts("\"#{rweb.url}\";\"#{robotsfield}\";\"#{cmsname}\";\"#{cmsversion}\";\"#{durl}\";\"#{disresponse}\";\"#{ititle}\";\"#{iurl}\";\"#{ibody}\"")
         }
       }
       of.close
