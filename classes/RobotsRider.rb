@@ -938,6 +938,7 @@ class RobotsRider
           # TODO: Change timeout for the HTTP connexion (https://stackoverflow.com/questions/13074779/ruby-nethttp-idle-timeout)
           robots_response = fetch(robotsurl)
           rweb.robots[:response] = robots_response.code.to_i
+          puts "Guardando en rweb.robots[:response] el valor #{rweb.robots[:response]} para rweb.robots[:url] "
           if robots_response.code.to_i == 200
             @log.info("It seems #{robotsurl} is accesible (#{robots_response.code}).")
             print " [FOUND] (#{robots_response.code}): ".green
@@ -1246,56 +1247,70 @@ class RobotsRider
     if !ofile.nil? and @robotswebs.size > 0
       of = File.open(ofile,"w")
       of.puts('URL;Robots.txt;CMS Name;CMS Version;Disallowed URL;Dis. Response;Interesting Title;Interesting URL;Interesting Body')
+      
       @robotswebs.each {|rweb|
-        rweb.disallowed.each{|disurl,vals|
-          # Default text
-          robotsfield = "<UNKNOWN>"
-          cmsname = "<UNKNOWN>"
-          cmsversion = "<UNKNOWN>"
+        
+        robotsfield = "<UNKNOWN>"
+        cmsname = "<UNKNOWN>"
+        cmsversion = "<UNKNOWN>"
+            
+        if !rweb.robots[:url].nil? and !rweb.robots[:response].nil?
+          if rweb.robots[:response].to_i == 200
+            robotsfield = "ACCESSIBLE (200)"
+          else
+            robotsfield = "NOT ACCESSIBLE (#{rweb.robots[:response]})"
+          end
+        end
+        cmsname = "#{rweb.cms[:name]}" if !rweb.cms[:name].nil? and rweb.cms[:name].size > 0
+        cmsversion = "#{rweb.cms[:version]}" if !rweb.cms[:version].nil? and rweb.cms[:name].size > 0
+        
+        if rweb.disallowed.size > 0
+          rweb.disallowed.each{|disurl,vals|
+            # Default text
+            durl = "<UNKNOWN>"
+            disresponse = "<UNKNOWN>"
+            ititle = "<UNKNOWN>"
+            ibody = "<UNKNOWN>"
+            iurl = "<UNKNOWN>"
+            
+            durl = "#{disurl}" if !disurl.nil? and disurl.size > 0
+            disresponse = "#{vals[:response]}" if !vals[:response].nil? and vals[:response].size > 0
+            # Interesting title?
+            if !vals[:interestingparts][:title].nil?
+              if vals[:interestingparts][:title]
+                ititle = "YES"
+              else
+                ititle = "NO"
+              end
+            end
+            # Interesting body?
+            if !vals[:interestingparts][:body].nil?
+              if vals[:interestingparts][:body]
+                ibody = "YES"
+              else
+                ibody = "NO"
+              end
+            end
+            # Interesting URL?
+            if !vals[:interestingparts][:url].nil?
+              if vals[:interestingparts][:url]
+                iurl = "YES"
+              else
+                iurl = "NO"
+              end
+            end
+  
+            of.puts("\"#{rweb.url}\";\"#{robotsfield}\";\"#{cmsname}\";\"#{cmsversion}\";\"#{durl}\";\"#{disresponse}\";\"#{ititle}\";\"#{iurl}\";\"#{ibody}\"")
+          }
+        else # No disallowed entries were found or no robots file was found
           durl = "<UNKNOWN>"
           disresponse = "<UNKNOWN>"
           ititle = "<UNKNOWN>"
           ibody = "<UNKNOWN>"
           iurl = "<UNKNOWN>"
           
-          if !rweb.robots[:url].nil? and !rweb.robots[:response].nil?
-            if rweb.robots[:response].to_i == 200
-              robotsfield = "ACCESSIBLE (200)"
-            else
-              robotsfield = "NOT ACCESSIBLE (#{rweb.robots[:response]})"
-            end
-          end
-          cmsname = "#{rweb.cms[:name]}" if !rweb.cms[:name].nil? and rweb.cms[:name].size > 0
-          cmsversion = "#{rweb.cms[:version]}" if !rweb.cms[:version].nil? and rweb.cms[:name].size > 0
-          durl = "#{disurl}" if !disurl.nil? and disurl.size > 0
-          disresponse = "#{vals[:response]}" if !vals[:response].nil? and vals[:response].size > 0
-          # Interesting title?
-          if !vals[:interestingparts][:title].nil?
-            if vals[:interestingparts][:title]
-              ititle = "YES"
-            else
-              ititle = "NO"
-            end
-          end
-          # Interesting body?
-          if !vals[:interestingparts][:body].nil?
-            if vals[:interestingparts][:body]
-              ibody = "YES"
-            else
-              ibody = "NO"
-            end
-          end
-          # Interesting URL?
-          if !vals[:interestingparts][:url].nil?
-            if vals[:interestingparts][:url]
-              iurl = "YES"
-            else
-              iurl = "NO"
-            end
-          end
-
           of.puts("\"#{rweb.url}\";\"#{robotsfield}\";\"#{cmsname}\";\"#{cmsversion}\";\"#{durl}\";\"#{disresponse}\";\"#{ititle}\";\"#{iurl}\";\"#{ibody}\"")
-        }
+        end        
       }
       of.close
       return true
