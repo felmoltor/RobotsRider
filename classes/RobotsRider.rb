@@ -344,10 +344,10 @@ class RobotsRider
     @juicytitles.each {|jtitle|
       jt = Regexp.escape(jtitle)
       if !pagetitle.match(jt).nil? 
-        return true
+        return jt
       end
     }
-    return false
+    return nil
   end
   
   #############
@@ -1010,10 +1010,11 @@ class RobotsRider
                               interestingparts[:body] = true    
                             end
                             # Is the title interesting?
-                            if hasJuicyTitle?(dis_response.body)
+                            jt = hasJuicyTitle?(dis_response.body)
+                            if !jt.nil?
                               @log.info "URL '#{disurl}' exists. (And it seems interesting in his Title)"
                               # puts " It seems interesting in his page Title!".red
-                              puts "  |-> [INTERESTING TITLE]".red
+                              puts "  |-> [INTERESTING TITLE]: '#{jt}'".red
                               interestingparts[:title] = true  
                             end
                             rweb_dentry[:interestingparts] = interestingparts
