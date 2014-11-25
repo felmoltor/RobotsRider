@@ -1,6 +1,8 @@
 #!/usr/bin/env ruby
 # encoding: utf-8
 
+require 'bundler/setup'
+
 require './classes/RobotsRider'
 require 'optparse'
 require 'colorize'

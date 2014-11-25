@@ -1,4 +1,5 @@
 .project
+outputs/*
 outputs/visited/*
 outputs/scanners/*.txt
 logs/*
