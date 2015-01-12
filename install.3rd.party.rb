@@ -72,13 +72,13 @@ end
 ####################
 
 def downloadTheHarvester()
-  %x(svn checkout http://theharvester.googlecode.com/svn/trunk/ #{$destfolder}/theharvester && chmod u+x  #{$destfolder}/theharvester/theHarvester.py) 
+  %x(git clone https://github.com/MarioVilas/theHarvester #{$destfolder}/theharvester && chmod u+x  #{$destfolder}/theharvester/theHarvester.py)
 end
 
 ####################
 
 def downloadWfuzz()
-  %x(svn checkout http://wfuzz.googlecode.com/svn/trunk/ #{$destfolder}/wfuzz && chmod u+x  #{$destfolder}/wfuzz/wfuzz.py) 
+  %x(git clone https://github.com/tjomk/wfuzz #{$destfolder}/wfuzz && chmod u+x  #{$destfolder}/wfuzz/wfuzz.py)
 end
 
 ####################
