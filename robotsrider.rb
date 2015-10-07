@@ -83,9 +83,6 @@ def initializeFolders()
   if !Dir.exists?("logs")
     Dir.mkdir("logs")
   end
-  if !Dir.exists?("outputs/visited")
-    Dir.mkdir("outputs/visited")
-  end
   if !Dir.exists?("outputs/scanners/dpscan")
     FileUtils.mkdir_p("outputs/scanners/dpscan")
   end
